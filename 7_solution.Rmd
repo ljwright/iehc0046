@@ -1,0 +1,143 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Analysis of Continuous Variables II - Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+```
+
+In this practical session we will learn how to use R to explore means of continuous variables and conduct one sample t-tests. We will use the dataset that you have been using throughout the course so far. We will look at associations between two variables in this dataset and whether there is suggestion of confounding or effect modification by other variables. 
+
+We'll be using the `DescTools` package in this practical. `DescTools` contains many helpful functions for getting descriptive statistics.
+
+```{r load, echo = FALSE, results = 'hide', warnings = FALSE, message  = FALSE, eval = TRUE}
+# install.packages("DescTools")
+library(DescTools)
+load("elsa.Rdata")
+```
+
+# 1. Exploring continuous variables
+## 1.1. Calculating means and 95% confidence intervals (CIs)
+
+In this first section we will use `DescTools` to explore some of the continuous variables in our dataset by calculating summary statistics, including their range, mean and 95% CIs. The `Desc` function from `DescTools` gives a host of descriptive statistics. The `MeanCI` function reports just the mean and its 95% CI.
+
+**Q. Describe the distribution of BMI (variable name bmi) in our sample based on its minimum and maximum values, mean and 95% CIs.**
+
+To find out the minimum and maximum values of BMI in our sample we can use the `Desc` function.
+
+```{r}
+Desc(elsa$bmi)
+```
+
+Notice, by default, the function also generates a plot. The top part is a histogram and density plot, the middle is a boxplot and the bottom is a cumulative density plot. To turn off this feature, use the argument `plotit = FALSE` (e.g. `Desc(elsa$bmi, plotit = FALSE)`). 
+
+There are 2,930 participants with an observed BMI measure in our sample (`n`). The mean BMI is 27.5 kg/m2 (standard deviation = 4.5). We see that the minimum BMI is 14.8kg/m2 and the maximum is 52.5kg/m2. The 95% CI for the mean ranges from 27.4 – 27.7 (`meanCI'`). The 95% CI gives 95% coverage of the population mean BMI that are compatible with the study data.
+
+To report just the mean and the 95% CI, use `meanCI`.
+
+```{r}
+MeanCI(elsa$bmi, na.rm = TRUE)
+```
+
+Note, you need to set `na.rm = TRUE` in the function call to ignore missing values. 
+
+**Q. Describe the distribution of BMI (variable name bmi) in our sample based on its minimum and maximum values, mean and 95% CIs.**
+```{r}
+Desc(elsa$dbp, plotit = FALSE)
+```
+
+There are 2,692 participants with an observed DBP value in our sample. The mean DBP is 77.3mmHg (standard deviation = 11.9). The minimum DBP is 45mmHg and maximum is 133.5mmHg. The 95% CIs ranges from 76.9mmHg to 77.8mmHg, showing 95% coverage of the population mean DBP that are compatible with the study data. 
+
+## 1.2. Calculating means and 95% CIs for different sub-groups
+We will now see how to calculate means and 95% CIs for different sub-groups in the data. We will look at how BMI differs by sex and by physical activity status. The relevant variables are `sex` and `physact`.
+
+`sex` and `physact` are both factor (categorical) variables. To see the categories, use the `levels` function.
+
+```{r}
+levels(elsa$sex)
+```
+```{r}
+levels(elsa$physact)
+```
+
+*Q: Show the mean BMI and 95% CIs for men and women in this sample separately. What do you conclude?*
+To find the Mean (+ 95% CIs) for the sub-groups, we will need to subset the `bmi` variable. We can do that using the square brackets (`[ ]`) notation. For males: 
+```{r}
+MeanCI(elsa$bmi[elsa$sex == "male"], na.rm = TRUE)
+```
+For females:
+```{r}
+MeanCI(elsa$bmi[elsa$sex == "female"], na.rm = TRUE)
+```
+
+The mean BMI of men is 27.5kg/m2 and the 95% CIs range from 27.3kg/m2 – 27.7kg/m2.The mean BMI for women is 27.6kg/m2 and the 95% CI is 27.3kg/m2- 27.8kg/m2. BMIs are very similar for men and women in our sample.
+
+A less laborious way of writing this code is to use the `by` function. The `by` function repeats another `function` across the unique levels of an index variable.
+```{r}
+by(data = elsa$bmi, INDICES = elsa$sex, FUN = MeanCI, na.rm = TRUE)
+```
+Here, `bmi` is fed into the function `MeanCI`, across subsets of the variable `sex` (i.e. male then female). `na.rm = TRUE` is passed onto the `MeanCI` function so missing values are ignored.
+
+
+**Q. Report the means and 95% CIs for BMI for the different physical activity categories (variable `physact`). What do you conclude?**
+
+```{r}
+by(data = elsa$bmi, INDICES = elsa$physact, FUN = MeanCI, na.rm = TRUE)
+```
+
+The mean BMI of people with low, medium and higher physical activity is 28.3kg/m2  (95% CI: 28.1, 28.6), 27.3kg/m2 (95% CI: 27.0, 27.5), and 26.6kg/m2 (95% CI: 26.3, 26.9), respectively. The mean BMIs of people therefore decreases with increased physical activity. You will learn how to formally test such differences in practical XX.
+
+# 2. One sample t-tests.
+## 2.1. Comparing sample means to population means
+We can use a one sample t-test when we want to compare the estimates from our sample with those from the general population. To do this in R we use the `t.test` function (`t.test(<variable>, mu = <population value>)`).
+
+**Q. We know from another study that the mean BMI of adults aged 60+ in the whole population is 28.5kg/m2. Are adults aged 60+ different from the general population in terms of BMI?**
+
+We need to subset `bmi` to only focus on individuals of `age` greater than or equal to 60.
+```{r}
+t.test(elsa$bmi[elsa$age >= 60], mu = 28.5)
+```
+The mean BMI of these adults was 27.6kg/m2 (95% CI: 27.4, 27.9). Under the output it shows our alternative hypothesis is that the mean is not equal to 28.5 (ie that there is no difference between our sample and the population). The Student t statistic is -7.58. The p-value associated with this test is very low (<0.001) and suggests low compatibility with the null hypothesis (`6.143e-14` is scientific notation for 6.143 x 10^-14 - i.e. 0.00000000000006143). We can conclude that our sample mean BMI is different from the general population mean. The mean BMI in our sample is lower than the population mean.
+
+Note, in the output `df` stands for degrees of freedom. Degrees of freedom are used to create the t-test statistic. In a t-test like this, the degrees of freedom is equal to observations minus 1. So, here, we used data from 1,409 individuals.
+
+**Q. What about if the general population mean BMI was 27.5kg/m2? Do our conclusions change?**
+We can just change the input to `mu`.
+
+```{r}
+t.test(elsa$bmi[elsa$age >= 60], mu = 28.5)
+```
+
+In contrast to the previous results, the Students t statistic is low (t=1.23) and the p value is relatively high. These findings suggest that our reasonably high compatibility with the null hypothesis that the mean BMI in our sample is the same as the population mean of 28.5. 
+
+## 2.2. One sample t-tests for sub-groups
+We can also conduct t-tests for even more specific sub-groups in our sample. For instance, we might want to know whether the mean BMI of people aged 60+ is higher in those who report low physical activity compared to the whole sample.
+
+**Q. Find out whether the mean BMI of people aged 60+ who report low physical activity is higher than the mean for the whole sample. You can identify those who reported low physical activity using the variable physact. You also need to first calculate the mean for those aged 60+.**
+
+```{r}
+MeanCI(elsa$bmi[elsa$age >= 60], na.rm = TRUE)
+```
+
+The mean BMI of adults aged 60+ in our sample is 27.6kg/m2 (95% CI: 27.4, 27.9). 
+
+We can now use this mean in a one sample t-test to assess whether the mean BMIs of people who report low physical activity is different from the mean BMI for the whole sample.
+
+```{r}
+t.test(elsa$bmi[elsa$age >= 60 &
+                  elsa$physact == "Group 1 -low"], mu = 27.6)
+```
+
+The output shows that the mean BMI for people aged 60+ who reported low physical activity is 28.2kg/m2 (95% CI: 27.8, 28.5). The Student t statistic is 3.2 and the p-value is 0.0013. The results suggest that BMI is higher among those who do little physical activity.
+
+# Formative exercise
+
+If you would like to look at more examples of conducting one sample t-tests you might like to work through the optional exercise below. 
+
+**Q. Do participants in non-manual social classes aged 60+ have a different mean BMI to the whole sample aged 60+? Note you will need to create a new binary social class variable combining social classes I, II, IIIN as ‘non-manual’ and social classes IIIM, IV, V as ‘manual’.**
+
+**Q. Do participants in non-manual social classes aged 60+ have a different mean DBP to the whole sample aged 60+?**
+

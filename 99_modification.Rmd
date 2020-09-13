@@ -1,0 +1,62 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Confounding and Effect Modification - Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+```
+
+In this practical session we will learn how to use R to deal with confounding and effect modification in analyses. We will use the dataset that you have been using throughout the course so far. We will look at associations between two variables in this dataset and whether there is suggestion of confounding or effect modification by other variables. 
+
+This practical is split into three sections:
+
+1. Dealing with confounding in associations with a binary outcome
+2. Dealing with effect modification in associations with a binary outcome
+3. Dealing with multiple confounders or effect modifiers in associations with a binary outcome
+
+We will use XX packages.
+```{r load, echo = FALSE, results = 'hide', warnings = FALSE, message  = FALSE, eval = TRUE}
+# install.packages("DescTools")
+library(summarytools)
+load("elsa.Rdata")
+```
+
+# 1. Dealing with confounding in associations with a binary outcome variable
+In this first section we are going to look at the association between physical activity (the exposure) and heart attack (the outcome). Physical activity is represented by variable `physact` and incident heart attack by `heart_attack`. Both of these variables are factor (categorical) variables.
+
+## 1.1. Examing the variables
+To summarise a factor variable, we can use the `freq` function from `summarytools`.
+
+**Q. How is physical activity distributed in our sample?**
+```{r}
+freq(elsa$physact)
+```
+
+There are 3128 people with information on physical activity in our sample, 1321 (42.2%) reported low physical activity, 1051 (33.6%) report medium activity, and 756 (24.2%) report high physical activity.
+
+**Q. How is physical activity distributed in our sample?**
+```{r}
+freq(elsa$heart_attack)
+```
+There are 3127 people with complete information on heart attack. 224 people in our sample had a heart attack (7.2%).
+
+## 1.2. Examining the association between physical activity and heart attack
+We can examine the association between physical activity and heart attack using a chi-squared test as we have two categorical variables. To do this we can use the `ctable()` function from `summarytools`.
+
+**Q. Is physical activity associated with heart attack?**
+```{r}
+ctable(elsa$heart_attack, elsa$physact, 
+       useNA = "no", prop = "c", chisq = TRUE)
+```
+
+Yes, there appears to be an association between physical activity and having a heart attack. 9.5% of those reporting low physical activity had a heart attack compared to 5.6% of those reporting medium and 5.3% of those reporting high physical activity. The null hypothesis is that there is no association between physical activity and heart attack. The chi-squared statistic (fairly high) and association p value (very low, <0.001) suggest that there is little compatibility with being selected from a population where those with the three levels of physical activity had the same proportion of people with heart attacks. We can therefore conclude that there is an association between physical activity and heart attack in this sample. 
+
+We can also express the association between physical activity and heart attack in terms of an odds ratio using the mhodds command in Stata. In the mhodds command we specify the outcome variable (heart_attack) before the exposure variable (physact). The interpretation is slightly different to that presented in the lecture as physical activity has 3 categories (instead of 2).
+
+```{r}
+ctable(elsa$heart_attack, elsa$physact, 
+       useNA = "no", prop = "c", OR = TRUE)
+```

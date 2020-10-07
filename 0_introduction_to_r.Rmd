@@ -26,7 +26,7 @@ The `Console` tab (left-side of the window) is where we will type commands. The 
 
 The `Files` tab (lower right) displays information about the folders and files on your computer. The other tabs on this pane are used for: viewing help files (`Help`); displaying plots (`Plots`); displaying formatted tables (`Viewer`); and viewing installed packages (`Packages` - more on this later).
 
-The `Environment` tab (upper right) displays information on data we currently have in memory. We haven’t loaded any data into R or produced any other data yet, so the tab is currently empty, but we’ll see this change later on. The `History` tab will record the list of commands we have inputted into the console. We'll ignore the `Connections` tab now as it is rarely used.
+The `Environment` tab (upper right) displays information on data we currently have in memory. We haven’t loaded any data into R or produced any other data yet, so the tab is currently empty. We’ll see this change later on. The `History` tab will record the list of commands we have inputted into the console. We'll ignore the `Connections` tab now as it is rarely used.
 
 There is a fourth pane - the Script pane - which currently isn’t open. Scripts are used in R to save code so that analyses can be reproduced later. Let’s open a new script now. Click `File -> New File -> R Script` or, alternatively, press `Ctrl+Shift+N`. Once you do this a blank file should appear in the top left of the window. If you want to, you can resize the panes by dragging their borders and you can change the position of panes by clicking `Tools -> Global Options... -> Pane Layout`.
 
@@ -114,7 +114,7 @@ In fact, some functions, such as `c()` and `paste()` above, do not have names fo
 
 If you do use argument names when using a function, you can change the order you put inputs into the function. Note, functions can also be nested inside other functions. For example, when running `mean(x = c(x, y, z))` above, we passed a vector created by the `c` function to the `mean` function. We are also able to pass objects we have stored in memory into functions (which we do in lines 3-5 above).
 
-A common problem when inputting functions is to not have included a matching closing parenthesis, "`)`", for an opening parenthesis, "`(`". When this occurs, R will expect more code to be inputted before it runs the command. (This feature allows you to write commands that run over multiple lines, to aid readability). You will be able to see if this has happened if there is a "`+`" sign at the bottom of the console (see Figure 4). Press `escape` on your keyboard to break out of this, if this happens.
+A common problem when inputting functions is to not have included a matching closing parenthesis, "`)`", for an opening parenthesis, "`(`". When this occurs, R will expect more code to be inputted before it runs the command. (This feature allows you to write commands that run over multiple lines, to aid readability). You will be able to see if this has happened if there is a "`+`" sign at the bottom of the console (see Figure 3). Press `escape` on your keyboard to break out of this, if this happens.
 
 ![Non-matching closing brace](img/escape.png)
 
@@ -124,11 +124,11 @@ R comes packaged with only a limited set of functions. This set of functions is 
 
 Packages are produced by the community of R users and are freely available to install. As mentioned, R is open source. This means that R is free in two senses: *free* as in free beer, and *free* as in free speech. Anyone can contribute to improving R and anyone can take the underlying code and amend it at will to suit their purposes. Further, anyone with access to a computer and some data can do their own research or replicate existing scientific work, regardless of income or affiliation to a paying institution. This makes R far more egalitarian and democratic than other propriety software, such as Stata, the versions of which run in hundreds or thousands of pounds *per year*!
 
-Open-source has two other advantages. First, as it is built on the voluntary contributions of many people, there is a very enthusiastic community you can go to for help. (I provide some links to free resources at the end of this document.) Second, development is not dependent on a single slow-moving organisation. This means you can find R packages for a huge array of tasks. For instance, you can use the [`flametree` package](https://flametree.djnavarro.net/) to make art in R (Figure 5).
+Open-source has two other advantages. First, as it is built on the voluntary contributions of many people, there is a very enthusiastic community you can go to for help. (I provide some links to free resources at the end of this document.) Second, development is not dependent on a single slow-moving organisation. This means you can find R packages for a huge array of tasks. For instance, you can use the [`flametree` package](https://flametree.djnavarro.net/) to make art in R (Figure 4).
 
 ![Generative art made using `flametree` package in R](img/flametree.png)
 
-This is what makes R wonderful, but it also has drawbacks. As individuals come up with their own solutions independently, many common functions do not work particularly well together. Working out how to get the result of one function into another can be time consuming and contributes to the steeper learning curve that R has compared with some other languages. Thankfully, there are many forums online (notably `StackOverflow`) where you can look for help on your problems. *One of the most useful R skills is learning how to Google effectively.*
+This is what makes R wonderful, but it also has drawbacks. As individuals come up with their own solutions independently, many common functions do not work particularly well together. Working out how to get the result of one function into another can be time consuming and contributes to the steeper learning curve that R has compared with some other languages. Thankfully, there are many forums online (notably `StackOverflow`) where you can look for help on your problems. Probably the most useful R skill is learning how to Google effectively.
 
 Back to packages. To use a package, we need to install it and then load it into R. We only need to install a package once, but we need to load the package each session to use it. Let's install the `tidyverse` package and load it. We'll be using this package a lot throughout the course. Below I introduce the `tidyverse` in further detail. It may take a while to install as it is quite a big package.
 
@@ -149,12 +149,12 @@ Before discussing the `tidyverse`, I want to introduce three more components of 
 The simplest structure for storing data in R is the `vector`. We created a numeric vector above using the command `c(1, 2, 3)`. Vectors can only store one type of data at once. There are several data types in R: numeric, integer, character, logical and complex.
 
 * Double
-  * Numbers with ability to store decimal places (e.g. 1, 2.49, etc.)
+  * Numbers with ability to store decimal places (e.g. `c(2.49, 1, 3/2)`)
 * Integer
-  * A round number. Denoted using `L` operator (e.g. 1L for integer 1).
+  * A round number. Denoted using `L` operator (e.g. `c(1L, 54L, 800L)`).
 * Character
   * Strings, such as "Hello" and "My name is Liam".
-  * Strings are surrounded by single (`'`) or double (`"`) quote marks.
+  * Strings are surrounded by single (`'`) or double (`"`) quote marks (e.g. `c("Bye", 'Hi')`)
 * Logical
   * *Boolean* values `TRUE` or `FALSE`
 * Complex
@@ -178,7 +178,7 @@ age_factor
 
 The last value is  `NA`. `NA` is R's missing value. Because `"My name is Liam"` was not in the allowed levels, it was changed to missing when we created the factor.
 
-If you use the `typeof()` function on a factor, it will return "`integer`". Underlying a factor is really just an integer vector. However, factors have two `attributes` (bits of metadata) that allow them to be interpreted in as factor*: the `class` atrribute and the `levels` attribute. You can see the attributes of an object using the `attributes()` function. To see the `class` and `levels` attributes directly, you can also use the `class()` and `levels()` functions.
+If you use the `typeof()` function on a factor, you will see that it returns "`integer`". Underlying a factor is really just an integer vector. However, factors have two `attributes` (bits of metadata) that allow them to be interpreted as factors: the `class` atrribute and the `levels` attribute. You can see the attributes of an object using the `attributes()` function. To see the `class` and `levels` attributes directly, you can also use the `class()` and `levels()` functions.
 
 ```{r}
 typeof(age_factor)
@@ -196,7 +196,7 @@ summary(c(1L, 2L, 3L, NA)) # An integer vector
 
 `summary()` is able to produce different results because `summary()` is a ***generic function***. How generic functions work depends on the type and attributes of the inputs you give them. 
 
-If you want to create a factor that has levels with a natural ordering (e.g. age group), you can create an "ordered" factor to preserve this ordering. Ordered factors make a number of calculations easier to carry out, which we'll make use of in future sessions.
+If you want to create a factor that has levels with a natural ordering (e.g. age group), you can create an "ordered" factor to preserve this ordering. Ordered factors make a number of calculations easier to carry out. We'll make use of this in future sessions.
 
 ```{r}
 age_factor_ord <- ordered(x = age_vec, levels = c("18-30", "30-60", "60+"))
@@ -205,7 +205,7 @@ str(age_factor_ord)
 
 ## Lists
 
-Vectors can only hold one type of data at once: a vector cannot hold both character strings and numerics, for example. If you try to use two types of data in a single vector, one type will be *coerced* into another. See what happens when you run the following commands.
+Vectors can only hold one type of data at once: for example, a vector cannot hold both character strings and numerics, for example. If you try to use two types of data in a single vector, one type will be *coerced* into another. See what happens when you run the following commands.
 
 ```{r, eval = FALSE}
 c(1, FALSE, TRUE)
@@ -219,7 +219,7 @@ x <- list(c(1, 2, 3), "Hello", c(TRUE, FALSE))
 x
 ```
 
-`x` is a list with three elements (or sub-objects): the numeric vector `c(1,2,3)`, a character vector of length 1 (`"Hello"`), and a logical vector `c(TRUE, FALSE)`. We can name the elements of a list using the function arguments:
+`x` is a list with three elements (or sub-objects): the numeric vector, `c(1,2,3)`, a character vector of length 1, `"Hello"`, and a logical vector, `c(TRUE, FALSE)`. We can name the elements of a list using the function arguments:
 
 ```{r}
 x <- list(num = c(1, 2, 3), greeting = "Hello", bool = c(TRUE, FALSE))
@@ -243,7 +243,9 @@ names(ages) <- c("David", "Fiona", "Philip") # Setting new names
 ages
 ```
 
-A special type of list is the `data.frame`. A `data.frame` is a list made up of objects (vectors and/or lists), which all have the same length. A `data.frame` is like a rectangular spreadsheet: every object within the `data.frame` is a column, and every element within an object is a cell. (The same position across objects makes up a row.) `data.frames` are like `factors` in that they are built upon another data type and contain metadata (`attributes`) to distinguish them for use in generic functions. `data.frames` have the `class` attribute `"data.frame"`.
+A special type of list is the `data.frame`. A `data.frame` is a list made up of objects (vectors and/or lists), which all have the same length. A `data.frame` is like a rectangular spreadsheet: every object within the `data.frame` is a column, and every element within an object is a cell. The same position across objects makes up a row.
+
+`data.frames` are like `factors` in that they are built upon another data type and contain metadata (`attributes`) to distinguish them for use in generic functions. `data.frames` have the `class` attribute `"data.frame"`.
 
 The main dataset we will use in this module will be stored as a `data.frame`. For now, let's look at the `iris data.frame` that comes bundled with R. `iris` is a dataset of measurements from 150 flowers. Run the following lines to look at `iris` object
 
@@ -294,7 +296,7 @@ z <- c(5, 6, 7)
 x*z
 ```
 
-Notice the warning message when multiplying `x` by `z`. R is noting that the shorter vector (in this case `x`) cannot be fully recycled to the length of the longer vector (in this case `z`) - i.e. 3 is not a multiple of 2. The command still ran, but the message is there to warn of potential mistakes.
+Notice the warning message when multiplying `x` by `z`. R is telling us that the shorter vector (in this case `x`) cannot be fully recycled to the length of the longer vector (in this case `z`) - i.e. 3 is not a multiple of 2. The command still ran, but the message is there to warn of potential mistakes.
 
 # Subsetting
 
@@ -308,6 +310,7 @@ We can pass a single index or multiple indices to return the elements in those p
 
 ```{r}
 weights <- c(Peter = 78, Mary = 64, John = 92)
+weights
 weights[2] # Subset by position - returns 2
 weights[c(3, 3, 1)] # Subset by position - returns 3, 3, 1
 ```
@@ -349,17 +352,17 @@ Subsetting can be be used directly on the result of a function. When used with a
 summary(weights)
 ```
 
-We can extract just the median using:
+So we just wanted to see just the median, we could use subsetting as so:
 
 ```{r}
 summary(weights)["Median"]
 ```
 
-(Other forms of subsetting also work!)
+Other forms of subsetting would also work!
 
 ## Subsetting vectors using logical vectors
 
-Finally, vectors can be subset using logical vectors (i.e. vectors of `TRUE` and `FALSE`). R returns the positions where the logical vector is `TRUE`.
+Finally, vectors can be subset using logical vectors (i.e. vectors of `TRUE` and `FALSE`). R returns the positions where the logical vector is `TRUE`. Unlike with subsetting by position or name, logical vectors are recycled.
 
 ```{r}
 weights[c(FALSE, TRUE, TRUE)]
@@ -367,7 +370,7 @@ weights[c(FALSE, TRUE, TRUE)]
 
 Here, we get the results for Mary and John but not Peter because `FALSE` was given for the first position.
 
-But, to use logical vectors, we need a simple way of constructing them. We can do this using *Boolean expressions*. The main Boolean expressions are:
+To use logical vectors, we need a simple way of constructing them. We can do this using **Boolean expressions**. The main Boolean expressions are:
 
 ```{r, eval = FALSE}
 weights == 64 # Equals to
@@ -378,6 +381,8 @@ weights <= 78 # Less than or equal to
 weights > 92 # Greater than
 weights >= 92 # Greater than or equal to
 ```
+
+Run the commands and check your understanding.
 
 The `!` NOT operator can also be used around expressions to ***negate*** them (`TRUE` becomes `FALSE`, `FALSE` becomes `TRUE`). Compare:
 
@@ -401,7 +406,7 @@ weights[1:3 > 2]
 Boolean expressions can be chained together using the `&` (`AND`) and `|` (`OR`) operators. For instance:
 
 ```{r}
-weights[weights < 70 | weights > 80]
+weights[weights < 70 | weights > 80] # Less than 70 or greater than 80
 weights[weights < 70 & weights > 80]
 ```
 
@@ -414,6 +419,8 @@ weights[weights > 80 | weights == 64 & weights < 70 ]
 weights[(weights > 80 | weights == 64) & weights < 70 ]
 ```
 
+Can you explain why this occurred? Hint, it is to do with the precedence of the Boolean operators.
+
 ## Subsetting Lists
 
 You can also use the square bracket syntax (`[]`) to subset lists. When you use the square brackets to subset lists, R returns another list containing just those elements.
@@ -425,7 +432,7 @@ info[2]
 info[c(TRUE, FALSE)]
 ```
 
-To extract a sub-object from a list, use the `[[]]` or `$` operators. These only return one sub-object at once. The double square brackets (`[[]]`) can be used with position indices or names. The dollar-sign operator, `$`, can only be used with names.
+To extract a sub-object from a list, use the `[[]]` or `$` operators. These only return one sub-object at once. The double square brackets, `[[]]`, can be used with position indices or names. The dollar-sign operator, `$`, can only be used with names.
 
 ```{r}
 info[[2]]
@@ -433,7 +440,7 @@ info[["ages"]]
 info$status
 ```
 
-Figure 6 makes clearer the distinction between the single square brackets and the double square brackets. Imagining a list as a train with sub-objects as carriages, subsetting with the single square brackets returns another train with the specified carriages attached. The double square brackets and dollar sign operators return just the contents of the specifed carriage (i.e. the sub-object itself). The image and analogy are taken from Hadley Wickham's Advanced R book [(**link**)](https://adv-r.hadley.nz/subsetting.html).
+Figure 5 makes clearer the distinction between the single square brackets and the double square brackets. Imagining a list as a train with sub-objects as carriages, subsetting with the single square brackets returns another train with the specified carriages attached. The double square brackets and dollar sign operators return just the contents of the specifed carriage (i.e. the sub-object itself). The image and analogy are taken from Hadley Wickham's Advanced R book [(**link**)](https://adv-r.hadley.nz/subsetting.html).
 
 ![Comparing subset operators](img/subset_train.png)
 
@@ -474,13 +481,13 @@ In this module, we will be working with an extract from the first wave of the En
 
 Let's have a brief look at this dataset. You can download the dataset from the module Moodle page. 
 
-To load the dataset into R, we'll need to provide the `load()` function with the file path of the file. First, let's set our *working directory* to the folder which contains the dataset. The working directory is the folder from which R will look to load and save files. When you pass R a file path, it will look for the file relative to the working directory. The idea is explained graphically in Figure 7 below.
+To load the dataset into R, we'll need to provide the `load()` function with the file path of the file. First, let's set our **working directory** to the folder which contains the dataset. The working directory is the folder from which R will look to load and save files. When you pass R a file path, it will look for the file relative to the working directory. The idea is explained graphically in Figure 6 below.
 
 ![Filepaths and folder structures](img/folder_structure.png)
 
-So, to load `pic.jpeg` which is in a subfolder of a subfolder of the working directory, we would use the command `load("subfold_1/subfold_2/pic.jpeg")`. To load `essay.docx`, we would just use `load("essay.docx")`. The "`/`" character delineates folders. Note, R uses the "`/`" character in file paths, rather than the "`\`" character used by Windows.
+So, to load `pic.jpeg` which is in a subfolder of a subfolder of the working directory, we would use the command `load("subfold_1/subfold_2/pic.jpeg")`. To load `essay.docx`, we would just use `load("essay.docx")` as it is in the working directory. The "`/`" character delineates folders. Note, R uses the "`/`" character in file paths, rather than the "`\`" character used by Windows.
 
-Set the folder containing the ELSA dataset as your working directory. You can use the `Files` tab (bottom right of screen) to navigate to the folder containing the dataset - if you click the three dots, `...`, at the right of that tab, it will open the file explorer so you can choose the correct folder (Figure 8). When you have selected the correct folder, it should appear in the `Files` tab.  Next, click the `More` button and select `Set as Working Directory` (Figure 8). This sends the `setwd()` command to the console. Copy and paste this command into your script, so your script is self-contained and includes everything needed to complete this tutorial afresh. (To change working directory, you can use the `setwd()` function directly.) 
+Set the folder containing the ELSA dataset as your working directory. You can use the `Files` tab (bottom right of screen) to navigate to the folder containing the dataset - if you click the three dots, `...`, at the right of that tab, it will open the file explorer so you can choose the correct folder (Figure 7). When you have selected the correct folder, it should appear in the `Files` tab.  Next, click the `More` button and select `Set as Working Directory` (Figure 7). This sends the `setwd()` command to the console. Copy and paste this command into your script, so your script is self-contained and includes everything needed to complete this tutorial afresh. (To change working directory, you can use the `setwd()` function directly.) 
 
 ![Manually setting working directory](img/working_directory.png)
 
@@ -568,11 +575,18 @@ elsa %>%
   select(-id, -sex)
 ```
 
-`select()` can also be used with the `everything()` helper function to rearrange the order of columns. Below we move `heart_attack` to the first column position (`everything()` returns all columns in a `data.frame`).
+`select()` can also be used with the `everything()` "helper" function to rearrange the order of columns. Below we move `heart_attack` to the first column position (`everything()` returns all columns in a `data.frame`). (To see other helper functions, see [**this website**](https://tidyselect.r-lib.org/reference/index.html).)
 
 ```{r, eval = FALSE}
 elsa %>%
   select(heart_attack, everything())
+```
+
+Alternatively, we could have used the `relocate()` function which solely rearranges columns.
+
+```{r, eval = FALSE}
+elsa %>%
+  select(heart_attack, .before = 1) # To put as first column
 ```
 
 We can also use named arguments in the select function to rename columns as we select them.
@@ -595,7 +609,7 @@ What `select()` is to columns, `filter()` is to rows. Pass Boolean expressions t
 
 ```{r, eval = FALSE}
 elsa %>%
-  filter(bmi > 30)
+  filter(bmi > 30) # Keep individuals with bmi greater than 30
 ```
 
 Multiple statements can be passed to the function by using multiple arguments. These are evaluated sequentially, so are equivalent to writing `statement_1 & statement_2 & ...`.
@@ -608,7 +622,7 @@ elsa %>%
 
 Above, we are able to write the `filter()` function across several lines as RStudio looks for a matching brace.
 
-If you want to combine multiple statements with an `OR`, you'll need to combine them using the "`|`" operator. Below we get individuals who either age 60 or female.
+If you want to combine multiple statements with an `OR`, you'll need to combine them using the "`|`" operator. Below we get individuals who are either age 60 or female.
 
 ```{r, eval = FALSE}
 elsa %>%
@@ -622,7 +636,7 @@ The `mutate()` function is used to create new columns/variables in the `data.fra
 ```{r, eval = FALSE}
 elsa %>%
   mutate(age_sq = age^2,
-         bmixage_sq = bmi*age_sq)
+         bmi_x_age_sq = bmi*age_sq)
 ```
 
 A helpful function to use within the `mutate()` function is `ifelse()`. The value `ifelse()` returns depends on whether a Boolean expression is `TRUE` or `FALSE` for a given observation. Below we create a new variable `high_bmi` which is equal to `"Above median BMI"` if the individual's BMI is above the median BMI in the whole `data.frame`, and `"Below median BMI"` otherwise.
@@ -649,13 +663,26 @@ Multiple variables can be produced in the same `summarise()` function call.
 ```{r}
 elsa %>%
   summarise(mean_bmi = mean(bmi, na.rm = TRUE),
-            min_bmi = min(age, na.rm = TRUE),
+            min_age = min(age, na.rm = TRUE),
             max_sbp = max(sbp, na.rm = TRUE))
 ```
 
+If we want to apply the same function to multiple columns, we can do this using the `across()` function.
+
+```{r}
+elsa %>%
+  summarise(across(c(bmi, age, sbp), ~ mean(.x, na.rm = TRUE)))
+```
+
+Above, we got the mean BMI, age and SBP scores using one command. The `~ function(.x, ...)` notation is referred to as `lambda` notation. `.x` is a placeholder for the current column being operated on.
+
+Note, `across()` works with many other tidyverse functions, including `mutate()` and `filter()`. It can be used with all the different helper functions, such as `everything()`. 
+
+
+
 ## `group_by()`
 
-`group_by()` is used to split a `data.frame` into groups, so that calculations are carried out respecting the groups. `group_by()` is easier to explain by example. Below I group `elsa` by `sex` to get median cholesterol (`chol`) and mean BMI figures for each continent separately. The results is a single `data.frame` with one row for each sex
+`group_by()` is used to split a `data.frame` into groups, so that calculations are carried in each group. `group_by()` is easier to explain by example. Below I group `elsa` by `sex` to get median cholesterol (`chol`) and mean BMI figures for each sex separately. The results is a single `data.frame` with one row for each sex.
 
 ```{r}
 elsa %>%

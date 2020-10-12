@@ -1,0 +1,170 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Analysis of Continuous Data III: Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(pwr)
+```
+
+In this practical we will use R to calculate statistical power and sample sizes for analyses. This practical is split into two sections. 
+
+1. Power calculations in R
+2. Sample size calculations in R
+
+Unlike previous practicals we do not require a dataset for this practical so there is no need to open the teaching dataset here. But, we will be using the `pwr` package. Let's install and load this now.
+
+```{r}
+install.packages("pwr")
+library(pwr)
+```
+
+Remember to make sure you save your code in a script!
+
+
+# 1. Power calculations in R
+
+In this first section we are going to use R to calculate the power of analyses in various scenarios. We will firstly compare the characteristics of two random samples under different conditions – different alpha levels, sample sizes and unequal sizes of groups. 
+ 
+First we will compare the mean age in two samples; each with 2000 individuals, with alpha level of 0.05 and then alpha of 0.01. The mean age in sample 1 is 48.7 years (standard deviation = 17.6). The mean age in sample 2 is 47.0 years (standard deviation = 17.7). 
+
+**Q. Use the function `pwr.t.test()` to estimate the statistical power at both alpha levels. What can you say about these results?**
+
+```{r}
+means <- c(48.7, 47)
+sds <- c(17.6, 17.7)
+n <- c(2000, 2000)
+
+pool_sd <- sqrt(((n[1]-1)*sds[1]^2 + (n[2]-1)*sds[2]^2)/(sum(n)-2))
+
+d <- (means[1] - means[2])/pool_sd
+```
+
+```{r}
+pwr.t.test(n = n, d = d)
+pwr.t.test(n = n, d = d, sig.level = 0.01)
+```
+
+**Q. Repeat the previous exercise but with 1500 individuals in each sample and then with 2500 individuals in each at each level of alpha (0.05 and 0.01). How do the power levels change as the sample size decreases or increases?**
+
+```{r}
+n <- c(1500, 1500)
+pwr.t.test(n = n, d = d)
+pwr.t.test(n = n, d = d, sig.level = 0.01)
+
+n <- c(2500, 2500)
+pwr.t.test(n = n, d = d)
+pwr.t.test(n = n, d = d, sig.level = 0.01)
+```
+
+**Q. Calculate the study power with 1500 people in sample 1 and 2500 in sample 2; then with 500 people in sample 1 and 3500 in sample 2. Keep alpha at 0.01. It might be useful to first recalculate the power for 2000 people in each sample as you did in the first exercise for ease of reference. **
+
+```{r}
+get_d <- function(n, means, sds){
+ pool_sd <-  sqrt(((n[1]-1)*sds[1]^2 + (n[2]-1)*sds[2]^2)/(sum(n)-2))
+ d <- (means[1] - means[2])/pool_sd
+}
+
+n <- c(1500, 2500)
+d <- get_d(n, means, sds)
+pwr.t2n.test(n[1], n[2], d, sig.level = 0.01)
+
+n <- c(500, 3500)
+d <- get_d(n, means, sds)
+pwr.t2n.test(n[1], n[2], d, sig.level = 0.01)
+```
+
+**Q. What is the proportion of men with depression? And that of women?**
+```{r}
+pwr.2p2n.test(ES.h(0.23, 0.31), 5186, 6205)
+```
+
+# 2. Sample size calculations in Stata
+
+In this second practical section we will work the other way around. We will instead work out the required sample sizes from a desired statistical power and other study characteristics but we don’t yet have the data, we are instead at the point of designing our study. We will again use the same commands as in Section A (i.e. power twomeans) but we will adapt these to the information we have available.
+
+**Q. Calculate the required sample size for comparing the mean cholesterol of two groups. You have information from a pilot study that measured cholesterol in people following a special diet (mean cholesterol = 5.7, standard deviation = 1.3) and those following their normal diet (mean cholesterol = 5.9, standard deviation = 1.2). Use a power of 0.8 followed by a power of 0.9. Insert the relevant figures from this information into the following command:**
+
+```{r}
+n <- c(1000, 1000)
+means <- c(5.7, 5.9)
+sds <- c(1.3, 1.2)
+
+d <- get_d(n, means, sds)
+pwr.t.test(d = d, power = 0.8)
+pwr.t.test(d = d, power = 0.9)
+```
+
+**Q. Calculate the required sample size for the difference in mean BMI in people with diabetes and those without. From previous work you know that the standard deviation of BMI is 4.6. Complete the following table reporting the total number of people required and the number in each group. Remember the command is:**
+
+```{r}
+pwr.t.test(d = 1/4.6, power = 0.8)
+```
+
+**Q. Estimate the sample size for the difference in the proportion of men and women taking statins, from your pilot study you found that 12% of men are taking statins versus 10.5% of women. Use the power at 80% and 90% in your calculations**
+
+```{r}
+pwr.2p.test(ES.h(0.105, 0.12), power = 0.8)
+pwr.2p.test(ES.h(0.105, 0.12), power = 0.9)
+```
+
+**Q. Estimate the sample size for the difference in the proportion of retired and employed men doing voluntary work. From previous studies you know that 34% of retired men are engaged in voluntary work while only 29% of employed men are engaged in voluntary work. You want to have power of your study 90%.**
+```{r}
+pwr.2p.test(ES.h(0.34, 0.29), power = 0.9)
+```
+
+**Q. Repeat the sample size calculation above with two times as many people in the retired group as compared to those in paid employment. Remember to add the option nratio(0.5) – we use option with value 0.5 in case that “group 1” are retired men and “group 2” working men because it is ratio of group 2 against group 1.**  
+
+```{r}
+pwr.2p.test(ES.h(0.34, 0.29), power = 0.9)
+```
+
+
+
+```{r}
+pwr.t.test(d = (48.7 - 47)/16.03, sig.level=.05,type="two.sample",alternative="two.sided")
+
+
+sd_1 <- 17.6
+sd_2 <- 17.7
+
+
+
+
+pool_sd <- sqrt(((n[1]-1)*sds[1]^2 + (n[2]-1)*sds[2]^2)/(sum(n)-2))
+sqrt(sum((n-1)*sds^2)/(sum(n)-2))
+
+means <- c(48.7, 47)
+sds <- c(17.6, 17.7)
+n <- c(2000, 2000)
+pwr.t.test(n, (means[1] - means[2])/pool_sd)
+pwr.t.test(n, (means[1] - means[2])/pool_sd, sig.level = 0.01)
+
+n <- c(1500, 1500)
+pwr.t.test(n, (means[1] - means[2])/pool_sd)
+pwr.t.test(n, (means[1] - means[2])/pool_sd, sig.level = 0.01)
+
+
+n <- c(2500, 2500)
+pwr.t.test(n, (means[1] - means[2])/pool_sd)
+pwr.t.test(n, (means[1] - means[2])/pool_sd, sig.level = 0.01)
+
+
+n <- c(1500, 2500)
+pool_sd <- sqrt(((n[1]-1)*sds[1]^2 + (n[2]-1)*sds[2]^2)/(sum(n)-2))
+pwr.t.test(n, (means[1] - means[2])/pool_sd, sig.level = 0.01)
+
+
+pwr.t2n.test(500, 3500, (means[1] - means[2])/pool_sd, sig.level = 0.01)
+
+
+power.t.test(delta = 1.7, sd = sqrt((1.3^2 + 1.2^2)/2), power = 0.9)
+
+power.t.test(delta = 0.2, sd = sqrt((1.3^2 + 1.2^2)/2), power = 0.9)
+
+```
+

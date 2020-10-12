@@ -286,4 +286,4 @@ The improvement in the quality of life score in the control group was greater (s
 
 # Formative Exercise
 
-Practice more with the paired t-test. Please assess whether there are differences before and after treatment in probing pocket depth (`ppd_0` -- `ppd_2m`).  
+Practice more with the paired t-test. Please assess whether there are differences before and after treatment in probing pocket depth (`ppd_0` -- `ppd_2m`).

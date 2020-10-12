@@ -1,0 +1,135 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Analysis of Categorical Data II: Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(summarytools)
+library(tidyverse)
+```
+
+In this practical we will use R to assess single proportions and to compare two proportions using the ELSA dataset.
+
+Remember to use a script to save your code and to change your working directory so you can load the ELSA dataset easily.
+
+```{r}
+load("elsa.Rdata")
+```
+
+```{r, include = FALSE}
+descr(elsa$bmi)
+```
+
+
+**1. Let’s start with basic demographic characteristics. How many men and women are there in the data?**
+
+We can use the `table()` and `prop.table()` function for this task.
+
+```{r}
+table(elsa$sex)
+prop.table(table(elsa$sex))
+```
+Alternatively, we can use the function `freq()` from the package `summarytools`, which provides more information.
+```{r}
+library(summarytools)
+freq(elsa$sex)
+```
+
+**2. Now, let’s focus on one of the health variables – `past_cvd`. Study participants were asked whether they had any cardiovascular condition diagnosed by their doctor in the past. How many people reported any such condition? Answer in terms of frequencies and proportions.**
+
+We can use the functions from the previous question.
+
+```{r}
+table(elsa$past_cvd)
+prop.table(table(elsa$past_cvd))
+freq(elsa$past_cvd)
+```
+
+**3. Now, let’s use this dataset to estimate the proportion and 95% CIs of individuals with cardiovascular conditions diagnosed by their doctor**
+
+We can do this using the `prop.test()` function. This function can take a table produced by the `table()` function as an input, if the number of successes is in the first cell.
+
+```{r}
+cvd <- table(elsa$past_cvd)
+cvd
+prop.test(cvd) # Total with CVD data
+```
+
+38.9% of individuals have cardiovascular conditions. The 95% CI for this proportion is 37.2-40.6%.
+
+**4.Let’s focus on CVD history a little bit more, and evaluate whether there is a difference between reported history of CVD in men and women.**
+
+We want to estimate proportions by sex. We can do this using subsetting.
+
+```{r}
+cvd_male <- table(elsa$past_cvd[elsa$sex == "male"])
+cvd_male
+prop.test(cvd_male)
+cvd_female <- table(elsa$past_cvd[elsa$sex == "female"])
+cvd_female
+prop.test(cvd_female)
+```
+
+The proportions are very similar.
+
+**5. Now compare these proportions. What conclusions can you make?**
+
+We can use the `table()` function to cross-tabulate two vectors. `prop.test()` can then be used comparing the proportion of successes in the first vector.
+
+```{r}
+cvd_sex <- table(elsa$sex, elsa$past_cvd)
+cvd_sex
+prop.test(cvd_sex)
+```
+
+The output provides the proportion of individuals with CVD conditions among males (39.3%) and females (38.6%), and the 95% CI for the difference in these proportions (-0.03 - 0.04%).
+
+**6. Compare CVD history for the age groups 45-64 and 65+. Do you think that there is any difference age groups?**
+
+We will need to create a new age group variable. We can do this using the `mutate()` function from the `tidyverse`. 
+
+```{r}
+library(tidyverse)
+elsa <- elsa %>%
+  mutate(age_group = case_when(age >= 45 & age <= 64 ~ "45 - 64",
+                               age >= 65 ~ "65+"),
+         age_group = factor(age_group))
+summary(elsa$age[elsa$age_group == "45 - 64"]) # Check we made the variable correctly
+summary(elsa$age[elsa$age_group == "65+"])
+```
+
+The `case_when()` function set the value of the `age_group` variable conditional on the values of age.
+
+Now we can compare proportions in the CVD groups.
+
+```{r}
+cvd_age <- table(elsa$age_group, elsa$past_cvd)
+cvd_age
+prop.test(cvd_age)
+```
+
+**7. Look more closely at those aged 45-64, and see whether there are any difference between those who are 45-54 and those who are 55-64. What are your conclusions about the age difference in reported CVD history?**
+
+We'll need to create another age_group variable.
+
+```{r}
+elsa <- elsa %>%
+  mutate(age_group2 = case_when(age >= 45 & age <= 54 ~ "45 - 54",
+                               age >= 55 & age <= 64 ~ "55 - 64"),
+         age_group2 = factor(age_group2))
+summary(elsa$age[elsa$age_group2 == "45 - 54"]) # Check we made the variable correctly
+summary(elsa$age[elsa$age_group2 == "55 - 64"])
+```
+Note, the `age_group2` is equal to `NA` (the missing value) if none of the conditions in the `case_when()` function are met (e.g. if age 65+).
+
+```{r}
+cvd_age2 <- table(elsa$age_group2, elsa$past_cvd)
+cvd_age2
+prop.test(cvd_age2)
+```
+
+**Formative Exercise: use the variable `smok` to create a binary variable that can be used in prop.test() command, and then assess whether reported CVD history differs by smoking status.**

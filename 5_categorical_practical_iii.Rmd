@@ -1,0 +1,104 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Analysis of Categorical Data III: Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(tidyverse)
+library(summarytools)
+library(mStats)
+```
+
+In this practical we will again use R to calculate chi-squared test, chi-squared test for trend, odds ratios and risk ratios using the ELSA dataset. 
+
+Remember to use a script to save your code and to change your working directory so you can load the ELSA dataset easily.
+
+```{r}
+load("elsa.Rdata")
+```
+
+We'll be using the `tidyverse`, `summarytools` and `mStats` package. Load the packages - and install, if necessary.
+
+```{r}
+library(tidyverse)
+library(summarytools)
+library(mStats)
+```
+
+Today, we will be interested in obesity. We have two relevant variables in our data: `bmi` and `bmi4`. Let's use one of these to and create new binary variable obesity for whether BMI is over 30kg/m^2^. This will be our dependent variable (outcome) of interest.
+
+```{r}
+elsa <- elsa %>%
+  mutate(obese = ifelse(bmi > 30, "Obese", "Not Obese"),
+         obese = factor(obese, levels = c("Obese", "Not Obese")))
+```
+
+
+**Q. How many cases of obesity do we have**
+
+Use the `freq()` function from `summarytools` (or `table()` from Base R).
+
+```{r}
+freq(elsa$obese)
+```
+
+**Q. Whatthe distribution of `wealth5` (quintiles of household wealth, 1=low, 5=high)**
+
+```{r}
+str(elsa$wealth5)
+freq(elsa$wealth5)
+```
+
+**Q. Look at the association between obesity and wealth. Calculate chi square test and draw your conclusions about the association.**
+
+We can use the `ctable()` function from the last session using the argument `chisq = TRUE`. We'll also use the argument `useNA = "no"` to remove missing values.
+
+```{r}
+ctable(elsa$wealth5, elsa$obese, chisq = TRUE, useNA = "no")
+```
+
+Ordinary chi square test suggests the associationbetween wealth and obesity – chi-square statistic is large and p<0.001. Strong evidence against null hypothesis of no association.
+
+**Q. Wealth classified in 5 quintiles is an example of ordinal variable. We can look at chi square test for trend.**
+
+We can use the function `prop.trend.test()` from Base R. The function takes two inputs, `x`, the number of "events" in each groups (in this case people with obesity) , and `n` the number of "trials" in each group (in this case the number of people).
+
+```{r}
+events <- table(elsa$wealth5[elsa$obese == "Obese"])
+trials <- table(elsa$wealth5)
+prop.trend.test(x = events, n = trials)
+```
+
+The chi-square test for trend  suggest  strong  dose  response  relationship  (null  hypothesis  of  no  association  can  be  rejected with p< 0.001). The results from the previous question suggest there is successively lower proportions of obese people in higher wealth groups.
+
+**Q. Calculate  odds  ratios  to  assess  the  magnitude  of  the  wealth  effect  on obesity.**
+
+We'll use the `tabOdds()` and `mhor()` functions from the previous session.
+
+```{r}
+tabOdds(elsa, wealth5, by = obese, plot = FALSE, na.rm = TRUE)
+mhor(elsa, wealth5, by = obese, na.rm = TRUE)
+```
+
+With increasing categories of wealth, odds ratio gets smaller and smaller – individuals in higher quintiles of wealth are less likely to bein obesity category. Those in wealth category 1 are 1.95-times more likely to have BMI > 30kg/m^2^ than those in category 5. 95% CIs typically do not cross 1, suggesting that there is higher levels of obesity in lower wealth groups. 
+
+**Q. Finally, let’s look at risk ratios. We will use the binary variable `sex`.**
+
+We can use the `ctable()` function again but setting argument `RR = TRUE`.
+
+```{r}
+ctable(elsa$sex, elsa$obese, OR = TRUE, RR = TRUE, useNA = "no")
+```
+
+Odds ratio more extreme than relative risk; both suggesting effect in the same direction (men less likely to have BMI>30 than women). Both 95% confidence intervals haveh lower and upper limit below 1 - strong evidence of the association between sex and obesity.
+
+**Q. Use  binary  smoking  variable  (`smok_bin`)  and  calculate  risk  and  odds  ratios. Interpret and give conclusions.**
+```{r}
+ctable(elsa$smok_bin, elsa$obese, OR = TRUE, RR = TRUE, useNA = "no")
+```
+
+No evidence for association between smoking and obesity. RR 1.01, OR 1.01 – no difference in risk of obesity or odds of obesity between smokers and non-smokers. 95% confidence interval almost symmetrical around 1.00.

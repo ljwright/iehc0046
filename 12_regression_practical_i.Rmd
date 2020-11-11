@@ -1,0 +1,272 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Linear Regression: Practical I"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+
+library(multcomp)
+library(tidyverse)
+library(broom)
+library(summarytools)
+load("elsa.Rdata")
+descr(elsa$age)
+```
+
+In this practical session, we will be learning how to use R to fit and interpret a linear regression model. We will be using the dataset you have seen before in previous sessions and we will be examining the association between systolic blood pressure (`sbp`) and (continuous) age. We'll also be using the `tidyverse`, `summarytools`, `broom`, `multcomp` packages. You will need to install `multcomp` and `broom`.
+
+Note, please load the packages in the order below. `multcomp` loads a function called `select()`. `tidyverse` also contains a function with this name (which we want to use) - loading `tidyverse` later will mean that `select()` from that package is available.
+
+```{r, eval = FALSE}
+# install.packages(c("multcomp", "broom")) # Uncomment and
+library(multcomp)
+library(tidyverse)
+library(broom)
+library(summarytools)
+load("elsa.Rdata")
+```
+
+There are three sections to this practical:
+
+1.	Visualising relationships between variables
+2.	Linear regression against a single continuous variable (`age`) 
+3.	Testing the assumptions of linear regression
+
+# 1. Visualising relationships between variables
+
+## 1.1. Summary statistics
+
+We are going to examine the relationship between systolic blood pressure (our outcome - or dependent - variable) `sbp` and age in years (our exposure - or independent - variable). We first need to explore these variables in our dataset. 
+
+```{r}
+descr(elsa$age)
+```
+
+**Q: What is the mean age of our sample? What is the median age?** 
+
+We can see here that the mean age is 60.1 years and the median age (50th percentile) is 59 years. Age has been censored (collapsed) at 45 and 90 years. 
+
+```{r}
+descr(elsa$sbp)
+```
+
+**Q: What is the mean and median systolic blood pressure for our sample? **
+
+We can see here that the mean systolic blood pressure is 140.4 mmHg (millimeters of mercury) and the median systolic blood pressure is 138.5 mmHg (50th percentile). The mean is slightly higher than median, suggesting that systolic blood pressure has a slightly positively skewed distribution in our sample. 
+
+**Q: How many observations do we have for age and for systolic blood pressure?**
+
+We have 3,129 observations for age and 2,692 for systolic blood pressure. This means all participants answered the question about their age at last birthday or date of birth and so we have no missing observations. However, we do have missing values for systolic blood pressure (coded as `NA` in the dataset). This could be for a number of reasons, for instance, fewer people consented to have their blood pressure measurements taken or it not being possible for the nurse to take an accurate blood pressure measurement. We are going to just run the analysis on those participants with valid systolic blood pressure measurements for now (R will delete them from the analysis automatically as they are coded as `NA`). We would need to be sure that we document this in our methods section.  
+
+A histogram is be a useful graph to use here to see how our outcome (systolic blood pressure) is distributed and to assess whether it approximates a normal distribution type. We can use `ggplot` (part of the `tidyverse`) to draw a histogram for the variable `sbp` and overlay a normal distribution for comparison. We saw the code to do this in a previous practical.
+
+```{r}
+ggplot(elsa) +
+  aes(x = sbp) +
+  geom_histogram(aes(y = ..density..)) +
+  stat_function(fun = dnorm, args = list(mean = mean(elsa$sbp, na.rm = TRUE),
+                                         sd = sd(elsa$sbp, na.rm = TRUE)))
+```
+
+**Q: Is systolic blood pressure normally distributed?** 
+
+Almost, but it is slightly positively skewed (the tail on the right side of the distribution is slightly longer).
+
+Histograms are sensitive to the number and positioning of bins (or columns) that are used in the plot. An alternative to the histogram is the kernel density plot, which approximates the probability density of a variable. Kernel density plots have the advantage of being smooth, unlike histograms. The relevant `geom_*()` function is `geom_density()`. We don't need to specify that the derived variable `..density..` is mapped to the y-axis in this case, because it is the default mapping for this function. Let's change the colour of the density function, though, so we can distingish it from the normal curve.
+
+```{r}
+ggplot(elsa) +
+  aes(x = sbp) +
+  geom_density(color = "red") +
+  stat_function(fun = dnorm, args = list(mean = mean(elsa$sbp, na.rm = TRUE),
+                                         sd = sd(elsa$sbp, na.rm = TRUE)))
+```
+
+The plot confirms that the distribution of systolic blood pressure is slightly positively skewed.
+
+## 1.2. Association between two continuous variables
+
+To examine the relationship between systolic blood pressure and age we can start by plotting a scatter plot. This graph will plot systolic blood pressure (y axis) against age (x axis) for each  observation in our sample with valid values of sbp and age. The relevant `geom_*()` function from `ggplot` is `geom_point()`.
+
+```{r}
+ggplot(elsa) +
+  aes(x = age, y = sbp) +
+  geom_point()
+```
+
+An issue with this plot is that many of the points are overlapping (because age is measured as in integer years). We can use the `geom_jitter()` function to add a bit of random "noise" to the data so the points don't overlap. We can also change the transparency (using the argument `alpha`) so a mass of overlapping points can be distinguished. `alpha` can be set between 0 (transparent) and 1 (solid colour).
+
+```{r}
+ggplot(elsa) +
+  aes(x = age, y = sbp) +
+  geom_jitter(alpha = 0.3)
+```
+
+**Q: What relationship exists between systolic blood pressure and age?**
+
+From the scatter plot, higher values of age in general correspond with higher values of blood pressure, so there is a positive linear relationship suggested, although this is quite weak. We know that systolic blood pressure usually increases with age and we see this here. The linear relationship is not very steep in comparison with the wide spread of blood pressure values for any particular age - knowing someone's age might help us predict `sbp` a little better than just using the sample mean, but our guess is still likely to be off!
+
+We can also get a numerical estimate of how age and systolic blood pressure are related by running a correlation.
+
+```{r}
+elsa %>%
+  select(age, sbp) %>%
+  cor(use = "complete.obs")
+```
+
+**Q: What is the sign of the correlation? Is that what you expect from the scatter diagram? What about its magnitude?**
+
+The sign is positive, which is what we would expect as we have already observed that there is a weak but positive linear relationship between age and blood pressure in our data. Its magnitude is 0.34 which is less than halfway between 0 (i.e. no relationship) and 1 (perfect relationship). This also makes sense as the relationship is certainly not perfect in our data.
+
+# 2. Linear regression against a single continuous variable (`age`) 
+
+We will assume that the association between systolic blood pressure and age is linear and fit a linear regression model:
+
+$$sbp_i = \beta_0 + \beta_1 \cdot age_i + \epsilon_i$$
+This equation is a way of representing the linear regression model we will be estimating. $sbp_i$ is systolic blood pressure for ELSA participant *i* and $age_i$ is their age when their blood pressure was measured. The difference between the actual systolic blood pressure for participant i and that predicted in the model is the residual, $\epsilon_i$.
+
+## 2.1. Linear regression in R
+
+To estimate a linear regression in R you use the `lm()` function. The linear model is represented with the formula notation: `y ~ x`. To view a nice summary of the linear regression object use `summary()`.
+
+```{r}
+mod <- lm(sbp ~ age, elsa)
+summary(mod)
+```
+
+**Q: What is the value of R-squared, and what does it mean?**
+
+$R^2 = 0.1154$ which means that only 12% of the variability of systolic blood pressure is explained by age. This statistic is also the square of the correlation coefficient that we saw earlier. This reflects what we saw from the scatter plot, that there was a large spread of blood pressure values around each age point and that the linear relationship was not very steep. It is not surprising then that this model, which includes just age, explains a relatively small proportion of the variability in systolic blood pressure.
+
+**Q: What is the estimated slope coefficient for age, and what does it mean? **
+
+The estimated coefficient for age is 0.69, which we interpret as the absolute increase in systolic blood pressure predicted as the age of participants increases by a single unit. Since age is measured in years, this means that per 1-year increase in age there is a 0.69 mmHg (millimeters of mercury) increase in systolic blood pressure. 
+
+**Q: What is the coefficient "(Intercept)" and what can it tell us?**
+
+In a linear regression, the coefficient for "(Intercept)" is the estimated intercept, which here is 98.76. This is the predicted value of `sbp` when age equals zero. In other words, this is the $\beta_0$ in the linear equation. We should note that given, the minimum age in our dataset is 45, this is an extrapolation beyond the data we use to estimate the model. It is unlikely to be correct in practice, and we should be wary of extrapolating beyong the model without further justification.
+
+**Q: What do the p-values tell us?**
+
+The p-value is from a t-test with a null hypothesis that the true coefficent is equal to 0. Both p-values are less than 0.01 so this suggests that there is a (positive) relationship between age and sbp and that `sbp` where age is zero is not zero. Remember, though, that this latter result is an extrapolation.
+
+We might also want to see the confidence intervals for the model coefficients. We can get these with the `confint()` function.
+
+```{r}
+confint(mod)
+```
+
+Neither of these overlap zero, which is to be expected given the p-values were both less than 0.05.
+
+## 2.2. Predicted values from a regression model
+
+We can use these model results to make predictions about systolic blood pressure using the fitted regression line. Although as we will see in later sessions, before we go on to use these predicted values in our analysis, we will need to consider how certain we are that the line fits our data.
+
+An assumption of the linear regression model is that the residual errors are equal to 0, on average, and that residual errors are uncorrelated with the independent variables. Therefore our best prediction of a person's `sbp` if we know their age is:
+
+$$sbp_i = \beta_0 + \beta_1 \cdot age_i$$
+We estimated $\beta_0$ and $\beta_1$ above, so we can plug them into this equation.
+
+$$sbp_i = 0.69 + 98.8 \cdot age_i$$
+
+**Q: What is the systolic blood pressure for someone aged 55?**
+
+We can work this out by hand.
+
+```{r}
+98.8 + 0.69*55
+```
+The predicted systolic blood pressure for someone aged 55 is 136.75 mmHg. 
+
+Alternatively, we can use coefficients directly using the `coef()` function. This returns a named vector of the coefficients.
+
+```{r}
+coef(mod)
+coef(mod)["(Intercept)"] + coef(mod)["age"]*55
+```
+(We can ignore the fact that the results has the name "(Intercept)" - this has just occurred because we subsetted the vector).
+
+A final approach is to use the `glht()` function from the package `multcomp`. To use `glht()` pass the function a model and a string giving the combination of variables you want to test. `confint()` displays the confidence intervals for the `glht()` result.
+
+```{r}
+glht(mod, "`(Intercept)` + 55*`age` = 0") %>%
+  confint()
+```
+
+We can also ask R to calculate a predicted value of systolic blood pressure for everyone in our sample using the function `augment()` from the package `broom`. `augment()` produces a new data from with the model variables (`age` and `sbp`) and some extra variables based on the results of the model. The predicted value is stored in a variable `.fitted`. We can use `select()` and `slice()` to see the first five values.
+
+```{r}
+aug <- augment(mod)
+aug %>%
+  select(sbp, age, .fitted) %>%
+  slice(1:5)
+```
+
+`augment()` also stores the residuals in a variable `.resid`.
+
+```{r}
+aug %>%
+  select(sbp, age, .fitted, .resid) %>%
+  slice(1:5)
+```
+We can see that the residual is equal to the observed outcome (`sbp`) minus the predicted values (`.fitted`).
+
+It can be also useful to see a scatterplot of each pair of age and systolic blood pressure values together with the fitted regression line (the predicted values). To do this use we can add the `geom_smooth()` function to a `ggplot` function call. `geom_smooth()` produces a regression line behind the scenes. We want a linear regression, so we need to specify the function `lm()` within `geom_smooth()`.
+
+```{r}
+ggplot(elsa) +
+  aes(x = age, y = sbp) +
+  geom_jitter(alpha = 0.2) +
+  geom_smooth(method = lm)
+```
+
+# 3.	Testing the assumptions of linear regression
+
+We need to check the assumptions of the regression model that were introduced in the lecture.
+
+## 3.1. Plots of residuals against fitted values
+
+In a well-fitted model, there should be no pattern to the residuals plotted against the predicted values. We can enter the data frame produced by `augment()` function into `ggplot()` to do this. Below, we use `geom_hline()` to drop a horizontal line running through $y = 0$ - remember, residuals should be equal to 0 on average and have constant variance (homoskedasticity).
+
+```{r}
+ggplot(aug) +
+  aes(x = .fitted, y = .resid) +
+  geom_hline(yintercept = 0) +
+  geom_jitter(alpha = 0.2)
+```
+
+**Q: Is there evidence of heteroskedasticity (the opposite of homoskedasticity)?**
+
+No, there is no heteroskedasticity, as there is no increasing or decreasing variation in the residuals as the fitted values increase.
+
+**Q: Are the residuals normally distributed?**
+
+Almost, although the pattern of residuals is slightly positively skewed, as there are some residuals at the top of the graph (absolute values >50).
+
+You can also look at the graph of standardized residuals (i.e., residual divided by its standard deviation) versus fitted values. `augment()` produces standardized residuals (variable `.std.resid`). If the residuals were normally distributed, the standardized residuals would be distributed as a standard normal variable (i.e. with a mean of 0 and a standard deviation of 1) and you would expect 95% of them to be between -1.96 and +1.96.
+
+```{r}
+ggplot(aug) +
+  aes(x = .fitted, y = .std.resid) +
+  geom_hline(yintercept = 0) +
+  geom_jitter(alpha = 0.2)
+```
+
+Similar to what we found before, standardized residuals are almost normally distributed, although the pattern of standardized residuals is slightly positively skewed, as there are more residual scatters at the top of graph (between 2.5 and 5).
+
+## 3.2. Checking for normally distributed standardized residuals visually
+
+To check the normality assumption more precisely, we can produce a kernel density plot again, overlaying a normal distribution (mean = 0, SD = 1) on top. In this case, we don't need to pass any other arguments to `stat_function()` because, by default, `dnorm()` produces normal distributions with mean = 0 and standard deviation = 1. 
+
+```{r}
+ggplot(aug) +
+  aes(x = .std.resid) +
+  geom_density(color = "red") +
+  stat_function(fun = dnorm)
+```
+
+The kernel density plot confirms that the distribution of standardized residuals is almost normally distributed, although is slightly positively skewed.

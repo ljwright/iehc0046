@@ -1,0 +1,363 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Linear Regression: Practical II"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(multcomp)
+library(car)
+library(tidyverse)
+library(summarytools)
+load("elsa.Rdata")
+descr(elsa$age)
+```
+
+In this practical session, we will be learning how to use R to fit and interpret a linear regression model against a binary or a categorical variable. We will also run linear regression models with multiple predictor variables. We will be using the dataset you have seen before in previous sessions and we will be examining the association between systolic blood pressure (`sbp`) and age, sex, social class, wealth and smoking. We'll also be using the `tidyverse`, `summarytools`, `multcomp` and `car` packages. You will need to install the `car` package.
+
+```{r, eval = FALSE}
+# install.packages("car") # Uncomment to install
+library(car)
+library(multcomp)
+library(tidyverse)
+library(summarytools)
+load("elsa.Rdata")
+```
+
+The four sections to this practical are as follows:
+
+1.	Linear regression against a binary variable 
+2.	Linear regression against a categorical variable
+3.	Multiple regression
+4.	Optional exercise
+
+# 1. Linear regression against a binary variable
+
+# 1.1. Examining and visualising variables
+
+We will use the `freq()` function to tabulate our variable `sex`. We'll then use `stby()` with `descr()` to see the distribution of `sbp` by sex.
+
+```{r}
+freq(elsa$sex)
+stby(elsa$sbp, elsa$sex, descr)
+```
+
+**Q: What percentage of the sample are men and what is the mean systolic blood pressure for men and for women in the sample?**
+
+We can see that around 44% of our sample are men (n=1,368). Of these, 1,184 men have a valid systolic blood pressure measurement and the mean systolic blood pressure for men in this sample is 141.2 mmHg. Compared to this, 1,508 women have a valid systolic blood pressure and the mean for women in our sample is 139.7 mmHg, so mean systolic blood pressure is slightly lower in women.
+
+We can also examine a histogram for `sbp` separately for men and women. We can see that both are a bit positively skewed, but approximate a normal distribution.
+
+```{r}
+ggplot(elsa[elsa$sex == "female", ]) +
+  aes(x = sbp) +
+  geom_histogram(aes(y = ..density..)) +
+  stat_function(fun = dnorm, 
+                args = list(mean = mean(elsa$sbp[elsa$sex == "female"], na.rm = TRUE),
+                            sd = sd(elsa$sbp[elsa$sex == "female"], na.rm = TRUE)))
+```
+
+
+```{r}
+ggplot(elsa[elsa$sex == "male", ]) +
+  aes(x = sbp) +
+  geom_histogram(aes(y = ..density..)) +
+  stat_function(fun = dnorm, 
+                args = list(mean = mean(elsa$sbp[elsa$sex == "male"], na.rm = TRUE),
+                            sd = sd(elsa$sbp[elsa$sex == "male"], na.rm = TRUE)))
+```
+
+## 1.2. Linear regression
+
+We will run the linear regression using the variable `sex`. The `lm()` function call has the same syntax with a binary independent variable and a continuous one. The linear equation with sex as the exposure is:
+
+$$sbp_i = \beta_0 + \beta_1 \cdot sex_i + \epsilon_i$$
+
+So that the model can be estimated, in the model sex = male will be inputted numerically by R as sex = 0; sex = female will be inputted as sex = 1.
+
+```{r}
+mod_1 <- lm(sbp ~ sex, elsa)
+summary(mod_1)
+```
+
+**Q: What is the value of the coefficient for female? What does it mean?**
+
+When a factor is used as an independent variable in R, the resulting coefficient is named as `var_namecategory`, so the coefficient for female is `sexfemale`. The value of the coefficient for female is -1.45, which means that compared to men, women have lower blood pressure by 1.45 mmHg. We can also think of this as the predicted change in the outcome when the exposure is one instead of zero. Again, we should also examine the 95% confidence intervals, which show us the possible lower and upper value for our coefficient.
+
+```{r}
+confint(mod_1)
+```
+
+The 95% CI for difference in blood pressure for men and women spans -2.95-0.04. These two values give 95% coverage of the population coefficients that are compatible with the study data. The t-test for sex tests H0 (the null hypothesis) that there is no relationship between sex and systolic blood pressure. The p value associated with this test is relatively low (p=0.057) so there is some statistical evidence against the null hypothesis.
+
+**Q: What is the value of the R2 and what is its meaning?**
+The R-squared is now 0.0014, which means that sex only explains 0.14% of the variability in systolic blood pressure! So there is a lot of unexplained variability in this model. We can see this by making a comparing boxplots of the distributions of `sbp` by sex. Let's also add a layer of points (`geom_jitter`) to see the underlying values. The two distributions are very similar. Our ability to predict `sbp` is not much helped by knowing the person's sex.
+
+```{r}
+ggplot(elsa) +
+  aes(x = sex, y = sbp, color = sex) +
+  geom_jitter(alpha = 0.2) +
+  geom_boxplot(fill = NA)
+```
+
+## 1.3. Predicted values from a regression model
+
+**Q. What is the predicted systolic blood pressure for men?**
+
+Recall, that an assumption of the linear regression model is that the residual errors are equal to 0, on average, and that residual errors are uncorrelated with the independent variables. Therefore our best prediction of a person's `sbp` if we know they are male is:
+
+$$sbp_i = \beta_0 + \beta_1 \cdot 0$$
+
+In other words, the predicted blood pressure for men is $\beta_0$ or "(Intercept)" in the output above
+
+```{r}
+coef(mod_1)["(Intercept)"] + coef(mod_1)["sexfemale"]*0
+```
+
+**Q: What is the predicted systolic blood pressure for women?**
+Our best prediction of a person's `sbp` if we know they are female is:
+
+$$sbp_i = \beta_0 + \beta_1 \cdot 1$$
+```{r}
+coef(mod_1)["(Intercept)"] + coef(mod_1)["sexfemale"]*1
+```
+
+Notice that these values match the mean `sbp` values for men and women we calculated earlier and the coefficient for female is the difference between them. Linear regression against a single binary variable gives you the same result of a t-test.
+
+```{r}
+t.test(sbp ~ sex, elsa)
+```
+
+Tip: You can also use R to create predicted values and residuals as we did in the last practical session. The scatter plot would be just 2 straight lines: one for men and one for women. There's no need to check for satisfying the normality assumptions when you only have binary independent variables or categorical independent variables in a linear regression model. 
+
+
+**Extra: What do you think will happen to the intercept and the direction of the coefficient if you run the regression model using a new variable which reverses the categories of `sex` (use `fct_rev()` from `forcats` to do this)**
+
+# 2. Linear regression with a single categorical variable (social class)
+
+Next, we are going to run a regression model using a single categorical variable and we will be examining the association between systolic blood pressure and social class (`sclass`).
+
+## 2.1. Examing and visualising variables
+
+**Q: How many categories of social class are in our sample? Should we recode this variable?**
+
+```{r}
+freq(elsa$sclass)
+```
+
+We have some missing values. We are going to just run the analysis on those participants with valid measurements for now. We can see that there are eight categories in our social class variable, however, two of these categories are very small and less useful (armed forces, not fully described) and there are also some very small numbers in some of the other categories. We will recode this variable into three groups. There are pros and cons to doing this and it is important to think about what this might mean for your research. This social class classification used here is The Registrar General’s Social Class Scale (1911). 
+
+We will use the `case_when()` function to create a new variable `sclass_3` which collapses these categories. (`as.numeric(sclass)` converts the factor to the underlying integer vector which makes the `case_when()` statements easier to write!)
+
+```{r}
+elsa <- elsa %>%
+  mutate(sclass_n = as.numeric(sclass),
+         sclass_3 = case_when(sclass_n %in% 1:2 ~ "Prof/Managerial",
+                              sclass_n == 3  ~ "Skilled Non-Manual",
+                              sclass_n %in% 4:6 ~ "Manual/Routine") %>%
+           factor(c("Prof/Managerial", "Skilled Non-Manual", 
+                    "Manual/Routine")))
+table(elsa$sclass, elsa$sclass_3, useNA = "ifany")
+```
+
+Now we can look at the mean systolic blood pressure for each of the different social class groups.
+
+```{r}
+stby(elsa$sbp, elsa$sclass_3, descr)
+```
+
+**Q: What is the mean systolic blood pressure for the three groups? **
+Professional/Managerial (138.6); Skilled non-manual (140.0); Manual/Routine (141.8). These seem to suggest a social gradient in blood pressure levels. We will check this using a linear regression.
+
+
+## 2.2. Linear Regression
+
+We will now perform a linear regression of `sbp` against `sclass_3g.` This will allow us to make comparisons of the outcome between the three social class groups.
+
+$$sbp_i = \beta_0 + \beta_k \cdot sclass3_i + \epsilon_i$$
+
+Because `sclass_3` contains more than two categories, we actually specify the linear model with $k-1$ dummy variables (where $k$ is the number of categories): one dummy variable (0/1) for whether the participant is skilled non-manual, another for whether they are manual/routine, with the reference category as professional/managerial. Note these dummy variables are mutually exclusive - a participant can have the dummy = 1 for at most one dummy variable.
+
+```{r}
+mod_2 <- lm(sbp ~ sclass_3, elsa)
+summary(mod_2)
+confint(mod_2)
+```
+
+**Q: How is the variable social class related to systolic blood pressure?**
+
+The coefficient for skilled non-manual is 1.42 meaning that workers in these occupations have 1.42 mmHg higher estimated blood pressure than professional/managerial workers. However, the confidence intervals for this coefficient are quite wide (-0.52, 3.36, perhaps because this is quite a small category. The p value associated with this test is 0.152, so there is little statistical evidence against the null hypothesis. Remember, this does not mean that there is actually no difference between the two groups, only that we don't have good evidence that there is a difference.
+
+Those in manual/routine occupations have blood pressure 3.22 mmHg higher than professional/managerial workers. By conventional criteria, the test statistic for this coefficient is t=3.77 and the p value <0.001, so we are more confident that we should reject the null hypothesis and conclude that there is a difference between the blood pressure of those in the manual/routine occupations compared to those in the professional/managerial groups.
+
+We can use the `linearHypothesis()` function from `car` to carry out an F-test on multiple coefficients simultaneously. `linearHypothesis()` has a similar syntax to the `glht()` function from `multcomp` but does not need backticks to distinguish model terms.
+
+```{r}
+linearHypothesis(mod_2, c("sclass_3Skilled Non-Manual = 0",
+                          "sclass_3Manual/Routine = 0"))
+```
+
+The p value is very low, so there is statistical evidence against the null hypothesis that all of the social class coefficients are 0. (This is not to say that **all** are not zero - only that at least one isn't.)
+
+## 2.3. Predicted values
+
+**Q: What is the value of the estimated systolic blood pressure of each category of social class?**
+
+```{r}
+coef(mod_2)
+coef(mod_2)[1] # Professional/managerial
+coef(mod_2)[1] + coef(mod_2)[2]  # Skilled non-manual
+coef(mod_2)[1] + coef(mod_2)[3]  # Manual/routine
+```
+
+Notice that these predictions give exactly the same results as the means we calculated above. Now we know that we cannot be as confident about the difference between the means of skilled non-manual group and professional/managerial group. 
+
+# 3. Multiple linear regression
+
+In this section, we will run regression models with more than one predictor variables. We will use `sbp` as the dependent variable, and run a regression model using age, sex, social class, quintiles of household wealth (`wealth5`) and smoking (`smok_bin`) as independent variables. 
+
+## 3.1. Examining variables
+
+First of all we need to explore these variables and check the number of observations. 
+
+```{r}
+descr(elsa[c("age", "sbp")])
+freq(elsa[c("sex", "sclass_3", "wealth5", "smok_bin")])
+```
+
+We need to run our regressions based on the sample with no missing data in all the variables listed above (This will be helpful for model comparision in the next section, as the sample used will be the same across models). We can use the function `drop_na()` from `tidyr` (part of the `tidyverse`) to drop rows with missing values. Let's save a new data frame with the smaller dataset we will be using in the regressions. Let's also convert `wealth5` to a factor variable so R knows to interpret this as a categorical, rather than continuous, variable.
+
+```{r}
+elsa_2 <- elsa %>%
+  select(age, sbp, sex, sclass_3, wealth5, smok_bin) %>%
+  drop_na() %>%
+  mutate(wealth5 = factor(wealth5))
+```
+
+## 3.2. Multiple linear regression
+
+Now run multiple linear regression. But let us start with 3 predictor variables: age, female, and social class. To add multiple independent variables, we simply add these to the model formula using the syntax `y ~ x1 + x2 + ... + xn`.
+
+```{r}
+mod_3 <- lm(sbp ~ sex + sclass_3 + age, elsa_2)
+summary(mod_3)
+confint(mod_3)
+```
+
+**Q: How do you interpret the output?**
+
+When sex and social class are held constant, per 1-year increase in age, there is a 0.68 mmHg increase in systolic blood pressure. Compared to men; women have 1.92 mmHg lower blood pressure (when age and social class are held constant). Workers in manual/ routine jobs have 2.52 mmHg higher systolic blood pressure than professional/managerial workers (when age and sex are held constant). The difference in blood pressure for skilled non-manual and professional/managerial is  small (0.99). Looking at its p-value and 95% CI, we can conclude that there is little clear statistical evidence against the null hypothesis of no difference between these two groups. The blood pressure for manual/routine workers is 2.52 mmHg higher than that of professional/managerial workers. Its p value is very low (0.003) and suggests low compatibility with the null hypothesis that there is no difference between manual/routine workers and professional/managerial workers.
+
+**Q: What is the predicted systolic blood pressure for women aged 55 and works in a manual/ routine job?**
+
+```{r}
+coef(mod_3)
+coef(mod_3)[1] + coef(mod_3)[2] + coef(mod_3)[4] + coef(mod_3)[5]*55
+```
+
+Alternatively, this could have been specified using `glht()`.
+
+```{r}
+glht(mod_3, 
+     "`(Intercept)` + 55*`age` + `sexfemale` + 
+     `sclass_3Manual/Routine` = 0") %>%
+  confint()
+```
+
+Next, add `wealth5` into the model. 
+
+```{r}
+mod_4 <- lm(sbp ~ sex + sclass_3 + age + wealth5, elsa_2)
+summary(mod_4)
+```
+
+**Q: How do you interpret the coefficients of wealth?**
+
+When age, sex, and social class are held constant, people in the highest quintile group (group 5) of household wealth had 2.21 mmHg lower systolic blood pressure than people in the lowest quintile group (group 1). Looking at its p value (0.066) and 95% CI, there is only some statistical evidence against the null hypothesis that there is no difference between group 5 and group 1. While people in the 2nd,3rd, and 4th household wealth group had a similar blood pressure level as people in the lowest quintile group (group 1), as their differences are less than 2 mmHg and their p values are large and 95% CIs are wide.
+
+**Q: By comparing the models with and without wealth, what do their R-squared values tell us?**
+
+In the current model, $R^2 = 0.121$ which means that 12% of the variability of systolic blood pressure is explained by our selected variables (age, female, social class and wealth).  $R^2$ is slightly higher than the model without wealth ($R^2 = 0.1177$). However, we need caution in interpreting $R^2$ to justify the utility of a variable added into the model, as R2 increases even when the new variables have no real predictive capability.
+
+The adjusted R-squared does this by adding a penalty to the R-squared for having extra variables in the models. We could alternatively look at the values of Root MSE (RMSE). Lower values of RMSE indicate better fit. Calculating these is simple. Within the model object (list) is a `residuals` vector. As the name suggests, RMSE is just need to take the square-root of the mean of the squared residuals.
+
+```{r}
+sqrt(mean(mod_3$residuals^2))
+sqrt(mean(mod_4$residuals^2))
+```
+
+Root MSE (18.315) is slightly lower than before (18.348). 
+
+**Q: Do you want to keep the wealth variable in your model?**
+
+We can use the `linearHypothesis()` function again. Rather than write "wealth52 = 0" ... "wealth55 = 0", we can use `paste0()` to save time.
+
+```{r}
+lincoms <- paste0("wealth5", 2:5, " = 0")
+lincoms
+linearHypothesis(mod_4, lincoms)
+```
+
+Results show that there is some statistical evidence (p=0.051) against the null hypothesis that all of the wealth coefficients are 0. In addition, R-squared and Root MSE show that the model with wealth is a slightly better model. Purely on statistical grounds, we may want to keep wealth in our model.
+
+**Note that selecting variables purely on statistical grounds is not good practice - we also need to use theory to justify model choices. It is best that you are clear from the outset which variables you will use.**
+
+Finally, add `smok_bin` into the model. We can write the function across multiple lines to improve readability.
+
+```{r}
+mod_5 <- lm(sbp ~ sex + sclass_3 + age + 
+              wealth5 + smok_bin, elsa_2)
+summary(mod_5)
+confint(mod_5)
+sqrt(mean(mod_5$residuals^2))
+```
+
+**Q: How to interpret the coefficients of `smok_bin`?**
+
+The difference in blood pressure between never/ex occasional smokers and ex-regular/current smokers is only 0.5 mmHg. Looking at its p value and 95% CI, we can conclude that there is little evidence of a difference between these two groups.
+
+**Q: By comparing the models with and without smoking, what do their R-squared and Root MSE tell us?**
+
+Adding smoking status to the model had little effect on R-squared and Root MSE.
+
+**Q: Do you want to keep the smoking variable in your model?**
+
+Purely on statistical grounds, we may want to exclude smoking from our final model, as it’s p-value is very large, and it did not improve the model fit. However, smoking has been identified from theory or prior evidence as an important risk factor for high blood pressure. So we may want to include it in our model even if its coefficient happens to have a large p-value in this particular analysis. Or we may want to use different measures of smoking status and to test its associate with `sbp`.
+
+# 4. Optional exercise
+
+**Q1: What is the mean BMI (`bmi`) of our sample? What is the median? Are they similar? How many observations do we have for BMI?**
+
+**Q2: Is BMI normally distributed? How did you come to this decision? **
+
+**Q3: Run a regression with continuous BMI as the outcome and age as the independent variable.**
+
+*	Examine the summary statistics first. 
+*	What do the coefficient and confidence intervals mean? 
+*	What does the $R^2$ tell you? 
+*	Calculate the predicted sbp value for someone aged 60.
+
+**Q4: Run a regression with continuous BMI as the outcome with ethnicity (ethni) as the independent variable.** 
+
+*	Examine the summary statistics first. 
+*	What do the coefficient and confidence intervals mean? 
+*	What does the $R^2$ tell you? 
+*	Calculate the predicted sbp value for someone whose ethnicity is non-white.
+
+**Q5:  Run a regression with BMI as the outcome (bmi) and self-reported general health (`srh`) as the independent variable.  Recode `srh` into three categories (very good/good/ fair, bad or very bad).**
+
+*	Examine the summary statistics first. 
+*	What do the coefficient and confidence intervals mean? 
+*	What does the $R^2$ tell you? 
+*	Calculate the predicted sbp value for someone who had fair, bad or very bad health.
+
+**Q6: Run a multiple regression with BMI as the outcome and age, ethnicity, and self-reported general health as the independent variables **
+
+*	What do the coefficient and confidence intervals mean? 
+*	What does the $R^2$ tell you? 
+*	Calculate the predicted sbp value for someone aged 60, white, with good health.
+
+

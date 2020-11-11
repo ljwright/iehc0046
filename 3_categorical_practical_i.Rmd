@@ -1,8 +1,8 @@
 ---
 title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
-subtitle: "Analysis of Categorical Data II: Practical"
+subtitle: "Analysis of Categorical Data I: Practical"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: pdf_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}

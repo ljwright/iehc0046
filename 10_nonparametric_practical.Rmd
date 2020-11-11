@@ -1,0 +1,134 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Non-Parametric Tests: Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(summarytools)
+library(tidyverse)
+load("elsa.Rdata")
+descr(elsa$crp)
+```
+
+In this practical session, we will learn how to use R to calculate non-parametric tests for the differences in the median of a continuous, non-normally distributed variable between different groups. We will also see how to examine the association between two or more non-normally distributed continuous variable. More specifically,in this session we will:
+
+1. Calculate the median of continuous variables that are not conforming to the normal distribution pattern. We will get insight about this lack of normal distribution through histograms.
+2. Examine whether there are differences in the median of an outcome variable that is continuous not normally distributed between two groups of an independent variable (Mann-Whitney test or Wilcoxon rank sum test).  
+3. Extend this to look at differences in the median outcome between three or more groups of a categorical independent variable (Kruskal-Wallis test).
+4. Assess the correlations between twoor morecontinuous variables that do not follow the normal distribution (rank correlation).
+
+We'll be working with the ELSA dataset again. Let's also load the `tidyverse` and `summarytools` packages as we will using them in this session.
+
+Remember to use a script to save your code and to change your working directory so you can load the ELSA dataset easily.
+
+```{r, eval = FALSE}
+load("elsa.Rdata")
+library(summarytools)
+library(tidyverse)
+```
+
+**Q1. Calculate the median, the mean and the corresponding 95% confidence interval for the following variables: blood CRP level in mg/l (`crp`), total units of alcohol per week (`alco`). Please also look at the histogram for each of those variables to see whether they are normally distributed. What do you observe?**
+
+To get the descriptive statistics, use the `descr()` function from `summarytools`. To get the 95% CI for the mean, use `t.test()`.
+
+```{r}
+descr(elsa$crp)
+t.test(elsa$crp)
+```
+
+It is clear to see that there is considerable difference between the mean and the median, with the former being much larger than the latter (mean: 3.8; median: 2). This implies that the variable does not follow the normal distribution, because a key property of the normal distribution is that the mean and the median (as well as the mode) have the same value. So, we would expect the frequency distribution of the blood CRP to be skewed. This is obvious by looking at the histogram. Use `qplot()` from `ggplot2` which is part of the `tidyverse`.
+
+```{r}
+qplot(elsa$crp)
+```
+
+The distribution is clearly skewed. We can confirm this by overlaying a normal distribution on this graph that has the mean and standard deviation of the `crp` variable. The code for this is a little complex:
+```{r}
+ggplot(elsa) +
+    aes(x = crp) +
+    geom_histogram(aes(y = ..density..)) +
+    stat_function(fun = dnorm, 
+                  args = list(mean = mean(elsa$crp, na.rm = TRUE),
+                              sd = sd(elsa$crp, na.rm = TRUE)))
+```
+`ggplot()` uses a *layered grammar of graphics* syntax. We take a dataset (`elsa`), map variables to visual properties of the graph (`crp` to a location on the x-axis, `..density..` which is derived within the function to the y-axis), and display the data as a geometry (in this case as a histogram). The last line overlays a normal distribution that has mean and standard deviation drawn from the `crp` variable. The graph confirms the variable is skewed - there are more observations with low levels of CRP.
+
+Now let's repeat this for the variable `alco`.
+
+```{r}
+descr(elsa$alco)
+t.test(elsa$alco)
+ggplot(elsa) +
+    aes(x = alco) +
+    geom_histogram(aes(y = ..density..)) +
+    stat_function(fun = dnorm, 
+                  args = list(mean = mean(elsa$alco, na.rm = TRUE),
+                              sd = sd(elsa$alco, na.rm = TRUE)))
+```
+
+We can again see that the mean is considerably higher than the median and the histogram shows a distribution that is highly skewed with a large majority of participants with scores close to 0 in terms of total units of alcohol consumed per week.
+
+**Q2. Using appropriate tests, please assess whether there are differences in the CRP variable (`crp`) between: a) men and women (`sex`); b) manual and non-manual occupational social class (`manual`); c) between those that are current smokers or regular ex-smokers and those that are occasional ex-smokers or never smoked (`smok_bin`). For this, it is advisable to also provide some summary figures in relation to CRP in the different groups of the independent variables**
+
+Since the outcome variable is continuous but not normally distributed, we should employ non-parametric tests to look into the associations. In this exercise, all explanatory variables are binary, so the Wilcoxon rank sum (Mann-Whitney) test is used for all three associations (`wilcox.test()`). The syntax for the `wilcox.test()` function is similar to that for `t.test()` that we saw in previous weeks.
+
+In order to have an understanding of the direction of any potential association, we will need to follow the test by summarising CRP for each of the groups of the independent variables. We can do that using the `stby()` function from `summarytools` (the `stby()` function works similarly to the `by()` function from Base R).
+
+```{r}
+wilcox.test(crp ~ sex, elsa)
+stby(elsa$crp, elsa$sex, descr)
+```
+
+The null hypothesis is that there is no difference in the rank of CRP by sex. The estimated p value (p=0.0035) indicates that there is hardly any support for the null hypothesis, thereby providing evidence about differences in CRP between men and women. We see from the `stby()` command that mean, median, and upper quartile (Q3) CRP levels are higher among females, so together the results suggest females have higher CRP levels than men in the population at large.
+
+Now let's look at the results for occupational class (`manual`).
+
+```{r}
+wilcox.test(crp ~ manual, elsa)
+stby(elsa$crp, elsa$manual, descr)
+```
+
+Again, there is little evidence for the null hypothesis. Mean, lower quartile (Q1), median, and upper quartile CRP levels are higher among manual participants, so the results suggest CRP levels among manual workers in the population at large, compared with non-manual workers.
+
+Now let's look at the results for smoking status (`smok_bin`).
+
+```{r}
+wilcox.test(crp ~ smok_bin, elsa)
+stby(elsa$crp, elsa$smok_bin, descr)
+```
+
+Again, there is little evidence for the null hypothesis. Mean, lower quartile (Q1), median, and upper quartile CRP levels are higher among former or current smokers, so the results suggest CRP levels among former and current smokers in the population at large, compared with non-smokers.
+
+**Q3. Please find out whether there are differences inblood CRP levels between people with different levels of physical activity: low, medium, high (`physact`). Then, check whether there are differences in the same outcome (CRP) between people in the four different BMI groups as presented in variable `bmi4`. What can you conclude?**
+
+In this case, the outcome variable is continuous but non-normally distributed (`crp`) and the explanatory variable has 3 groups (low-medium-high physical activity). The Kruskal-Wallis test is appropriate in these cases (`kruskal.test()`). We will again need to use `stby()` to understand descriptively how CRP levels differ across physical activity status.
+
+```{r}
+kruskal.test(crp ~ physact, elsa)
+stby(elsa$crp, elsa$physact, descr)
+```
+
+We see that there is little evidence that CRP is similar across the three physical activity groups (p=0.0004). There are higher CRP values for the low physical activity group, while the groups with medium and high physical activity have similar CRP profiles.
+
+```{r}
+kruskal.test(crp ~ bmi4, elsa)
+stby(elsa$crp, elsa$bmi4, descr)
+```
+
+It is clear that there is no support for the null hypothesis of no difference (p < 0.0001). Therefore we conclude that there are differences in CRP values in the population according to BMI groups. Furthermore, by looking at the descriptive statistics, we can see that there are consecutively higher CRP levels across BMI groups.
+
+**Q4. Finally, please calculate the correlation coefficients and respective p values for the associations between blood CRP levels (`crp`), total units of alcohol per week (`alco`) and deciles of household wealth (`wealth10`). For this, please use the sample with non-missing data on all these three variables.**
+
+For this, we are looking at the correlation between these three variables. We already know that two of these variables (`crp` and `alco`) are continuous not normally distributed variables, while the wealth deciles variable (`wealth10`) refers to an ordinal variable with 10 categories. Therefore, we should opt for the rank correlation, which is a non-parametric test that makes no assumption about the distribution of the variables to be correlated. We can use the `cor()` function but we need to set the `method` as `"spearman"`. To use the complete case say we also need to set the argument `use` to `"complete.obs"`.
+
+```{r}
+elsa %>%
+  select(crp, alco, wealth10) %>%
+  cor(use = "complete.obs", method = "spearman")
+```
+
+The negative sign of the respective value indicates that higher values of CRP are associated with lower weekly alcohol consumption and the same is also the case for the association between CRP and wealth (first column). The positive sign in the correlation between wealth deciles and alcohol consumption indicates higher levels of alcohol consumption of higher values in the wealth variable. The actual values of rho are rather low (rho= -013 for alcohol and CRP, rho=-0.17 for wealth deciles and CRP,and rho= 0.16 for wealth deciles and alcohol) highlighting that these associations are weak.

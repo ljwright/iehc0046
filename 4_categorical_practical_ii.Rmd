@@ -1,0 +1,151 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Analysis of Categorical Data II: Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(tidyverse)
+library(summarytools)
+library(mStats)
+```
+
+In  this  practical  we  will  use  R  to  calculate  chi-squared  test  and odds  ratios using the `elsa` dataset.
+
+Remember to use a script to save your code and to change your working directory so you can load the ELSA dataset easily.
+
+```{r}
+load("elsa.Rdata")
+```
+
+We'll be using the `tidyverse` and `summarytools` packages, as well as a new package, `mStats`. Load the packages - and install, if necessary.
+
+```{r}
+# install.packages("mStats") # uncomment if you need to install!
+library(tidyverse)
+library(summarytools)
+library(mStats)
+```
+
+Most of the social and demographic variables and health behaviours were measured at the baseline of the ELSA study,  while  incident  events  were  recorded  at  the  end  of longitudinal  follow-up. In this session,  we  are interested in the association between some social and demographic variables and health behaviours and incident heart attacks.
+
+**Q. Look at the variable `heart_attack`. How many events are there?**
+
+Use the `freq()` function from `summarytools` (or `table()` from Base R).
+
+```{r}
+freq(elsa$heart_attack)
+```
+
+**Q. Look at the frequency distribution of heart_attack by sex, age groups, smoking(`smok_bin`), and occupational status (`manual`). How do you interpret the results?**
+
+Let's create a variable with ten year age groups. We can do this using the `cut_width()` function from `ggplot2` which is part of the `tidyverse`.
+
+```{r}
+elsa <- elsa %>%
+  mutate(age_group = cut_width(age, width = 10, centre = 5))
+by(elsa$age, elsa$age_group, summary) # To check worked correctly
+table(elsa$age_group)
+```
+
+There are only 10 individuals in the upper-age group categoriy (85-95). Let's collapse the 75-85 and 85-95 age groups into a single category using the `fct_recode()` function from `forcats` (part of the `tidyverse`).
+
+```{r}
+elsa <- elsa %>%
+  mutate(age_group = fct_recode(age_group, "(75, 95]" = "(75,85]", "(75, 95]" = "(85,95]"))
+```
+
+Now, to cross-tabulate the variables, use the `ctable()` function from `summarytools`.
+
+```{r}
+ctable(elsa$sex, elsa$heart_attack)
+ctable(elsa$age_group, elsa$heart_attack)
+ctable(elsa$smok_bin, elsa$heart_attack)
+ctable(elsa$manual, elsa$heart_attack)
+```
+
+**Q. Next, look at the association between sexand heart attacksin more details. Calculate chi square test and draw your conclusions about the association.**
+
+To get the chi-square test, we can change the `chisq` argument in the `ctable()` function to `TRUE`.
+
+```{r}
+ctable(elsa$sex, elsa$heart_attack, chisq = TRUE)
+```
+The chi-square test statistic is large and p < 0.01. This is very strong evidence against the null hypothesis of no association between sex and incident heart attack. Heart attacks are more common among males than females.
+
+**Q. Evaluate the association between smoking, occupational status and heart attacksusing chi-squared test.**
+
+We can swap `sex` for `manual` and `smok_bin` in the above code.
+
+```{r}
+ctable(elsa$manual, elsa$heart_attack, chisq = TRUE)
+ctable(elsa$smok_bin, elsa$heart_attack, chisq = TRUE)
+```
+
+The p-values in both chi-square tests were low. There is evidence that heart attacks are more common among smokers and among individuals in manual jobs.
+
+**Q. Evaluate the association between age using 10-years age groups (age10)and heart attacks. Is there any difference in the interpretation of your findings when you have exposure with 4 categories rather than just two?**
+
+```{r}
+ctable(elsa$age_group, elsa$heart_attack, chisq = TRUE)
+```
+
+We have 4 categories of age but this does not change how we should interpret results of chi-square test. Again, we have a chi-square  statistic and  p<0.001. This is  strong  evidence  against  null  hypothesis.  In other words, there is strong  evidence  of  association between age and incidence of heart attacks.
+
+**Q. Let’s look again at the association between sex and heart attacks. Calculate OR (and 95% CI) to see the magnitude of the effect of sex on heart attacks.**
+
+We'll use two functions from the `mStats` package: `tabOdds()` and `mhor()`. We'll use `tabOdds()` to get the odds (+ 95% CIs) of heart attack in each sex. We'll use `mhor()` to get the odds ratios.
+
+We'll need to set the argument `na.rm` to `TRUE` as there is some missing data in the `sex` and `heart_attack` variables.
+
+```{r}
+tabOdds(elsa, sex, by = heart_attack, plot = FALSE, na.rm = TRUE)
+mhor(elsa, sex, by = heart_attack, na.rm = TRUE)
+```
+
+Note, because of how the `heart_attack` factor is ordered, the functions have given us the odds of **not** having a heart attack in each sex. If we want to change this, we can use the `case_value` argument in the `tabOdds()` and `mhor()` functions.
+
+```{r}
+tabOdds(elsa, sex, by = heart_attack, case_value = 'Mentioned',
+        plot = FALSE, na.rm = TRUE)
+mhor(elsa, sex, by = heart_attack, case_value = 'Mentioned', na.rm = TRUE)
+```
+
+The odds of heart attack are very different by sex, and 95% CIs do not overlap. Men are 2.93 times more likely to have incident heart attack than women. The 95% confidence interval is between 2.19 and 3.93, with a p-value < 0.001. 
+
+**Q. Now,  do  the  same  with `smok_bin` and `manual`.**
+
+```{r}
+tabOdds(elsa, smok_bin, by = heart_attack, case_value = 'Mentioned', plot = FALSE, na.rm = TRUE)
+mhor(elsa, smok_bin, by = heart_attack, case_value = 'Mentioned', na.rm = TRUE)
+```
+
+Similar  interpretation as  before – odds of  heart  attack  are  0.045  among  non-smokers  and  0.104  among smokers, OR 2.32 for smokers compared to non-smokers: smokers are 2.32 times more likely to have incident heart attack than non smokers. Confidence interval for OR 1.70-3.15, farfrom 1.00, p<0.001, strong evidence against null hypothesis, supporting evidence of association between smoking and incident heart attacks.
+
+```{r}
+tabOdds(elsa, manual, by = heart_attack, case_value = 'Mentioned',
+        plot = FALSE, na.rm = TRUE)
+mhor(elsa, manual, by = heart_attack, case_value = 'Mentioned', na.rm = TRUE)
+```
+
+Similar interpretation as before – odds of heart attack are 0.063 among non-manual workers and 0.098 among manual workers, OR 1.55 for manual vs non-manual class: non-manual workersare 0.64 times as likely to have incident heart attack than manual workers. Confidence interval for OR 0.49-0.85, relatively far from 1.00 (but closer than in previous examples). The p-value = 0.02, strong evidence against null hypothesis, supporting evidence of association between occupational class and incident heart attacks.
+
+**Q. Finally, let’s look at `age10` variable.**
+
+```{r}
+tabOdds(elsa, age_group, by = heart_attack, case_value = 'Mentioned',
+        plot = FALSE, na.rm = TRUE)
+mhor(elsa, age_group, by = heart_attack, case_value = 'Mentioned', na.rm = TRUE)
+```
+By default, the 45-55 has been used as the reference category in the `mhor()` function. We can change this using the `exp_value` argument. For instance:
+
+```{r}
+mhor(elsa, age_group, by = heart_attack, exp_value = '(55,65]',
+     case_value = 'Mentioned', na.rm = TRUE)
+```
+
+**Q. Please  try  to  make  conclusions  about  your  today’s  analysis.  Which  variables  seem  to  be  risk factors for incident heart attack –on what basis do you make these conclusions?**
+

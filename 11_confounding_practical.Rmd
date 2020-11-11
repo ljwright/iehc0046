@@ -1,0 +1,225 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Confounding and Effect Modification: Practical"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(tidyverse)
+library(summarytools)
+library(mStats)
+load("elsa.Rdata")
+```
+
+In this practical session we will learn how to use R to deal with confounding and effect modification in analyses. We will use the ELSA dataset that you have been using throughout the course so far. We will look at associations between two variables in this dataset and whether there is suggestion of confounding or effect modification by other variables. We'll also be using the `tidyverse`, `summarytools`, and `mStats` packages. You may need to install the `mStats` package.
+
+```{r, eval = FALSE}
+# install.packages("mStats") # Uncomment if need to install.
+library(tidyverse)
+library(summarytools)
+library(mStats)
+load("elsa.Rdata")
+```
+
+This practical is split into three sections. For each section there is a video that shows you how to use the Stata commands. You might choose to watch the video first and then work through the practical exercise by yourself. Or you might instead choose to work through the practical alongside watching the video. 
+
+1. Dealing with confounding in associations with a binary outcome
+2. Dealing with effect modification in associations with a binary outcome
+3. Dealing with multiple confounders or effect modifiers in associations with a binary outcome
+
+This practical deviates slightly from the Stata practical. There we look at the Mantel-Haenszel test for trend. Here we use the simple Mantel-Haenszel test.
+
+## 1. Dealing with confounding in associations with a binary outcome variable
+
+In this first section we are going to look at the association between physical activity (the exposure) and heart attack (the outcome). Physical activity is represented by variable `physact` and incident heart attack by `heart_attack.`
+
+### Examining the variables
+We should first examine these two key variables. Let's use the `freq()` function from `summarytools`.
+
+**Q. How is physical activity distributed in our sample?**
+```{r}
+freq(elsa$physact)
+```
+There are 3128 people with information on physical activity in our sample, 1321 (42.2%) reported low physical activity, 1051 (33.6%) report medium activity, and 756 (24.2%) report high physical activity.
+
+**Q. How many people in our sample had a heart attack?**
+```{r}
+freq(elsa$heart_attack)
+```
+There are 3127 people with complete information on heart attack. 224 people in our sample had a heart attack (7.2%).
+
+## Examining the association between physical activity and heart attack
+
+We can examine the association between physical activity and heart attack using a chi-squared test as we have two categorical variables. Remember, to do this we cross-tabulate these two variables with `ctable()` (from `summarytools`), setting the argument `chisq = TRUE` to report the chi-squared statistics. We'll also need to set the argument `useNA = "no"` to ignore missing values.
+
+**Q. Is physical activity associated with heart attack?**
+```{r}
+ctable(elsa$physact, elsa$heart_attack, useNA = "no", chisq = TRUE)
+```
+
+Yes, there appears to be an association between physical activity and having a heart attack. 9.5% of those reporting low physical activity had a heart attack compared to 5.6% of those reporting medium and 5.3% of those reporting high physical activity. The null hypothesis is that there is no association between physical activity and heart attack. The chi-squared statistic (fairly high) and association p value (very low, <0.001) suggest that there is little compatibility with being selected from a population where those with the three levels of physical activity had the same proportion of people with heart attacks. We can therefore conclude that there is an association between physical activity and heart attack in this sample.
+
+**Q. Describe the association between physical activity and heart attack as an odds ratio and 95% confidence intervals.**
+
+We can also express the association between physical activity and heart attack in terms of an odds ratio using the `mhor()` function from `mStats`. This function only reports the odds ratios, so let's also use the `tabOdds()` function (from `mStats`) to report the odds of heart attach in this group. 
+
+```{r}
+tabOdds(elsa, physact, by = heart_attack, 
+        case_value = "Mentioned", plot = FALSE, na.rm = TRUE)
+mhor(elsa, physact, by = heart_attack, 
+        case_value = "Mentioned", na.rm = TRUE)
+```
+As the frequency of physical activity increases the likelihood of having a heart attack decreases. People in the lowest category of physical activity have 75.4% higher odds (95% CI = 27.2%, 141.7%) of heart attack than individuals in the medium category and 87.1% higher odds (95% CI = 29.5%, 170.3%) than individuals in the highest category. The 95% CIs do not cross 1 and the p-values = 0.001, strong evidence against the null hypothesis.
+
+## Assessing the role of self-rated health in the association between physical activity and heart attack
+
+In this section we will assess whether self-rated health is a confounder of the association between physical activity and heart attack.
+
+First self-rated health needs to be recoded into a new binary variable as we would like to have two categories comparing those with ‘very good’ and ‘good’ health, with people who have ‘fair’, ‘bad’ or ‘very bad’ health. We use `mutate()` from the tidyverse to do this.
+
+**Q. Generate a new self-rated health variable with two such categories. Ensure that the categories are labelled.**
+
+```{r}
+levels(elsa$srh)
+elsa <- elsa %>%
+  mutate(srh_2 = ifelse(srh %in% levels(srh)[1:2], # True if very good or good, false otherwise
+                        "Very good or good", "Fair or bad"),
+         srh_2 = ifelse(is.na(srh), NA, srh_2), # Need to recode as missing is srh is missing
+         srh_2 = factor(srh_2)) # Convert to factor
+table(elsa$srh, elsa$srh_2, useNA = "ifany")
+```
+
+Remember, to be a confounder the variable should be associated with both the exposure and outcome. Also it should not lie on the causal pathway. To meet the conditions of a confounder we will firstly assess whether the new binary self-rated health variable is associated with both physical activity and heart attack. Again, we can do this using a chi-squared test.
+
+**Q. Run two Chi-squared tests to check whether self-rated health is associated with both the exposure (physical activity) and outcome (heart attack). What do you conclude?**
+
+```{r}
+ctable(elsa$srh_2, elsa$heart_attack, useNA = "no", chisq = TRUE)
+```
+
+Here we can see that there is an association between self-rated health and heart attack. 3.6% of those with very good or good health had a heart attack, however 13.7% of those with fair or bad health had a heart attack. The Chi-squared statistic is high (104.5) with a low p value (<0.001). Therefore we can say that self-rated health and heart attack are associated. It appears that those with poorer health are more likely to have had a heart attack.
+
+```{r}
+ctable(elsa$physact, elsa$srh_2, useNA = "no", chisq = TRUE, prop = "c")
+```
+
+We added the argument `prop = "c"` to get the column proportions rather than the row proportions. Again there appears to be an association between self-rated health and physical activity. 27.8% of those with very good or good health reported high physical activity. 18% of those with fair or bad health reported high physical activity. Similarly, a greater percentage of people with fair or bad health reported low physical activity. The Chi-squared statistic is again high (124) and the p value is low (p<0.001) suggesting low compatibility with people with good or bad health having reporting the same levels of physical activity.
+
+Therefore we can conclude that self-rated health is associated with both our exposure (physical activity) and outcome (heart attack). It is also unlikely to be on the causal pathway between these two variables and we therefore consider it to be a confounder of this association. 
+
+The next step is to use the `mantelhaen.test()` function to see what effect the inclusion of self-rated health has in our analysis of the association between physical activity and heart attack.
+
+**Q. Assess the role of self-rated health in the association between physical activity and heart attack using the `mantelhaen.test()` function. Interpret your findings.**
+
+We showed earlier that physical activity was associated with heart attack. Here we will assess the role of self-rated health in this association using the `mantelhaen.test()` function. This function only reports the results of the test, so let's also use the `mhor()` function to see how the odds ratios differ by self-rated health.
+
+```{r}
+mhor(elsa[elsa$srh_2 == "Very good or good", ],
+     physact, by = heart_attack,
+     case_value = "Mentioned", na.rm = TRUE)
+mhor(elsa[elsa$srh_2 == "Fair or bad", ],
+     physact, by = heart_attack,
+     case_value = "Mentioned", na.rm = TRUE)
+mantelhaen.test(elsa$physact, elsa$heart_attack, elsa$srh_2)
+```
+
+We can see that the strength of the association between physical activity and heart attack is weaker among those with fair or bad self-rated health than among those with good self-rated health. For instance, low physical activity is related to 27.3% (95% CI = -16.3%, 93.5%) higher odds of heart attack compared with medium physical activity among the fair/bad self-rated health group, but 58.3% (95% CI = -8%, 172.3%) higher odds of heart attack among the good/very good self-rated health group. The p-value of the Mantel-Haenszel test is 0.06082 so the test is not significant at the 95% level. Notice also that the size of the odds-ratios is smaller than when we did not stratify by self-rated health. This suggests that part of the association between physical activity and heart attack is confounded by self-rated health.
+
+## 2. Dealing with effect modification in associations with a binary outcome
+
+### Assessing the role of sex in the association between physical activity and heart attack
+
+In this second practical we are going to apply the methods for testing for effect modification in associations involving a binary outcome as shown in part B of the lecture. Please watch part B of the lecture before attempting this practical exercise.
+
+We will return to the association between physical activity and heart attack that we tested in part 1 of this practical. Here we will assess whether sex plays a role in this association as an effect modifier. 
+
+**Q. Using the `mhor()` and `mantelhaen.test()` functions, assess whether sex plays a role in the association between physical activity and heart attack. What do you conclude?**
+
+```{r}
+mhor(elsa[elsa$sex == "male", ],
+     physact, by = heart_attack,
+     case_value = "Mentioned", na.rm = TRUE)
+mhor(elsa[elsa$sex == "female", ],
+     physact, by = heart_attack,
+     case_value = "Mentioned", na.rm = TRUE)
+mantelhaen.test(elsa$physact, elsa$heart_attack, elsa$sex)
+```
+Focussing firstly on the output of the `mantelhaen.test()` function, we can see that there is evidence that sex is an effect modifier (p < 0.001). Looking at the ouput of the `mhor()` functions we see that for both men and women, there is an association between physical activity and heart attack, but the association is larger among women. For instance, comparing low and medium physical activity groups among women, the odds of heart attack is 128.2% higher in the former group (95% CI = 31.6%, 295.9%). Among men, the corresponding figure is 50.4% (95% CI = 0.05%, 125.1%). We can therefore conclude that sex is an effect modifier of the relationship between physical activity and heart attack, and that the association is stronger for women.
+
+### Assessing the role of wealth in the association between physical activity and heart attack
+
+**Q. Assess whether wealth plays a role in the association between physical activity and heart attack following a similar approach to the previous section. Use variable `wealth5` in your analysis.**
+
+Rather than write the `mhor()` function five times, we will use the `map()` function from `purrr` which is part of the `tidyverse`. `map()` takes an object and repeats a function for each element of that object. In this case, we will pass it the vector 1, 2, 3, 4, 5 and run the `mhor()` function each time. `.x` is a placeholder for the current element - i.e. in the first iteration it is 1, the second it is 2, and so on.
+
+```{r}
+str(elsa$wealth5)
+map(1:5,
+    ~ mhor(elsa[elsa$wealth5 == .x, ],
+     physact, by = heart_attack,
+     case_value = "Mentioned", na.rm = TRUE))
+mantelhaen.test(elsa$physact, elsa$heart_attack, elsa$wealth5)
+```
+
+Focussing on the test for homogeneity first, the Chi-square statistic is high and the p value is lower suggesting that we should  use the stratum-specific estimates – i.e. the relationship between physical activity and heart attack does vary across the strata of `wealth5.` We can confirm this by viewing the different ORs from the `mhor()` functions. We can therefore say that `wealth5` is an effect modifier of the association between physical activity and heart attack. Note though that the odds ratios do not follow any obvious pattern according to wealth quintile, so this result could be an artefact of statistical variation in the dataset.
+
+**Optional: assessing the role of age group in the association between diabetes and heart attack**
+
+If you would like some further practice in using the `mhor()` and `mantelhaen.test()` functions to assess the role of third variables as confounders and effect modifiers ,you might look to consider the association between diabetes (`diab`) and heart attack and whether age plays a role. You will need to create a new age group variable as the age variable in the dataset (variable name age) is currently in continuous form. We suggest coding age into the following categories – 55 or younger, 56-65, 66-75, and 76+. This is also extra practice for generating and labelling new variables in R!
+
+# 3. Dealing with multiple confounders or effect modifiers in associations with a binary outcome
+
+## 3.1. Considering multiple confounders using `mhor()` and `mantelhaen.test()`
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# # 4. Confounding and effect modification ----
+# rm(list = ls())
+# load("elsa.Rdata")
+# 
+# freq(elsa$physact)
+# freq(elsa$heart_attack)
+# ctable(elsa$physact, elsa$heart_attack, useNA = "no", chisq = TRUE)
+# 
+# library(mStats)
+# tabOdds(elsa, physact, by = heart_attack, plot = FALSE, na.rm = TRUE)
+# mhor(elsa, physact, by = heart_attack, na.rm = TRUE)
+# 
+# events <-table(elsa$physact[elsa$heart_attack == "Mentioned"])
+# trials <-table(elsa$physact)
+# prop.trend.test(x = events, n = trials)
+# 
+# str(elsa$srh)
+# freq(elsa$srh)
+# elsa <- elsa %>%
+#   mutate(srh_2 = ifelse(srh %in% levels(srh)[1:2],
+#                         "Very good or good", "Fair or bad"),
+#          srh_2 = ifelse(is.na(srh), NA, srh_2),
+#          srh_2 = factor(srh_2))
+# table(elsa$srh, elsa$srh_2, useNA = "ifany")
+# 
+# ctable(elsa$srh_2, elsa$heart_attack, useNA = "no", chisq = TRUE)
+# ctable(elsa$physact, elsa$srh_2, useNA = "no", chisq = TRUE)
+# 
+# tab_3 <- table(elsa$heart_attack, elsa$physact, elsa$srh_2)
+# mantelhaen.test(tab_3)
+# mantelhaen.test(elsa$physact, elsa$heart_attack, elsa$srh_2)
+# library(magrittr)
+# elsa %>%
+#   dplyr::select(physact, heart_attack, srh_2) %>%
+#   drop_na() %$%
+#   epiDisplay::mhor(physact, heart_attack, srh_2, graph = F)
+```
+

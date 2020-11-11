@@ -1,0 +1,302 @@
+---
+title: "IEHC0046 BASIC STATISTICS FOR MEDICAL SCIENCES"
+subtitle: "Linear Regression: Practical III"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, 
+                      warnings = FALSE, messages = FALSE)
+library(describedata)
+library(car)
+library(multcomp)
+library(tidyverse)
+library(summarytools)
+load("elsa.Rdata")
+descr(elsa$age)
+```
+
+In this practical session, we will learn how to use interaction terms in a regression model. We will be using the dataset you have seen before in previous sessions. We will also learn how to fit a non-linear relationship in the regression models, as well as learn some methods of data transformation to achieve linearity and normality assumptions. We'll use the `tidyverse`, `summarytools`, `multcomp`, `car`, and `describedata` packages. You will need to install the `describedata` package.
+
+```{r, eval = FALSE}
+# install.packages("describedata") # Uncomment to install
+library(describedata)
+library(car)
+library(multcomp)
+library(tidyverse)
+library(summarytools)
+load("elsa.Rdata")
+```
+
+The three sections to this practical are as follows:
+
+1.	Linear regression with interaction terms
+2.	Linear regression with non-linear relationships
+3.	Data transformation
+
+# 1. Linear regression with interaction terms
+
+## 1.1. Interaction between sex and age
+
+The term interaction is used to describe situations in which the relationship between $y$ and $x$ differs according to the level of one or more of the other variables. We will run a multiple regression with `sbp` as the outcome, and age and sex as the predictor variables. We know from the lecture that the relationship between `sbp` and age differs by sex, so we will test for an interaction term between sex and age.
+
+First, run the multiple regression without an interaction.
+
+```{r}
+mod_1 <- lm(sbp ~ age + sex, elsa)
+summary(mod_1)
+```
+
+To add an interaction between sex and age, we have two options:
+
+```{r, eval = FALSE}
+lm(sbp ~ age*sex, elsa)
+lm(sbp ~ age + sex + age:sex, elsa)
+```
+
+Both are equivalent (run to confirm this). `age*sex` includes the main effects (age and sex) and the interaction term. `age + sex + age:sex` programs this explicitly.
+
+```{r}
+mod_2 <- lm(sbp ~ age*sex, elsa)
+summary(mod_2)
+confint(mod_2)
+```
+
+**Q: Can you write down the equation for the predicted `sbp`?**
+
+$$sbp_i = \beta_0 + \beta_1 \cdot sex_i + \beta_1 \cdot age_i + \beta_1 \cdot sex_i \cdot age_i + \epsilon_i$$
+
+where $sex_i$ is a dummy variable = 0 if male and = 1 if female.
+
+**Q: Can you interpret the results? What are the `sbp` intercepts (i.e. when age = 0)  and `sbp` slopes (the increase in sbp for each year increase in age) for men and women?**
+
+Men is the reference group (coded as 0 in female), so the `sbp` intercept for men is 114.12 and its 95% CI is from 107.44 to 120.81. The intercept of `sbp` for women is 87.02 (calculated as 114.12 - 27.10 x 1).
+
+The interaction term is 0.42 (95% CI 0.28 to 0.57). Its p value is very low (< 0.001), so we have enough statistical evidence that the relationship between `sbp` and age differs by sex. In other words, the slopes of `sbp` are different for men and women. In men, the increase in `sbp` for each year increase in age (i.e., the slope) is 0.45 (calculated as 0.45 x 1) and its 95% CI is from 0.34 to 0.56). In women, the slope is 0.87 (calculated as 0.45 + 0.42).
+
+To get the 95% CI for the women’s `sbp` intercept and age slope, use `glht()`.
+
+```{r}
+glht(mod_2, "`(Intercept)` + `sexfemale` = 0") %>%
+  confint()
+glht(mod_2, "`age` + `age:sexfemale` = 0") %>%
+  confint()
+```
+
+**Q: What is the systolic blood pressure for women aged 60?**
+
+```{r}
+glht(mod_2,
+    "`(Intercept)` + `sexfemale` +
+     60*`age` + 60*`age:sexfemale` = 0") %>%
+  confint()
+```
+
+## 1.2. Interaction between sex and wealth
+
+Next, we will run a multiple regression again with sbp as the outcome, and age, female and quintile of wealth (`wealth5`) as the predictor variables, and also an interaction term between female and `wealth5`. (Note that this model is just an example of how to interpret the results of the interaction term, but maybe it is too simple for real research.) We'll need to convert `wealth5` to a factor so R interprets it as a categorical variable.
+
+```{r}
+elsa <- elsa %>%
+  mutate(wealth5 = factor(wealth5))
+```
+
+We can add an interaction between two factor variables using the same syntax as above.
+
+```{r}
+mod_3 <- lm(sbp ~ age + sex*wealth5, elsa)
+summary(mod_3)
+```
+
+**Q: Can you interpret the results?**
+
+In this model, males in the lowest wealth group (group 1) are the references categories. The intercept is 103.94 (95%CI 98.81 to 109.07), which is predicted `sbp` for males aged 0 in the lowest wealth group. The intercept of `sbp` for women in the lowest wealth group is 103.94 + (-3.78)= 100.16. The slope of sbp for men and women is 0.66. 
+
+The interaction terms between female and wealth are 5.12, 3.52, 2.46, and -0.87, respectively. There is some statistical evidence that there is an interaction between the 2nd wealth group and female (p=0.040). For other groups, there is limited evidence to reject the null hypothesis that there is no interaction between wealth groups and sex.
+
+The (non-interaction) coefficients of wealth groups are all negative, suggesting that, for men, those in higher wealth groups had lower sbp levels than men in the lowest wealth group, although only the differences between the 4th wealth group and the lowest wealth group reached conventional criteria of p<0.05.
+
+**Q: What is the predicted systolic blood pressure of women aged 55 and in the 2nd wealth group? What about women aged 55 and in the lowest (1st) wealth group? What about men aged 60 and in the highest (5th) wealth group?**
+
+```{r}
+glht(mod_3, "`(Intercept)` + `sexfemale` + `wealth52` +
+     `sexfemale:wealth52` + 55*`age` = 0") %>%
+  confint()
+
+glht(mod_3, "`(Intercept)` + `sexfemale` + 55*`age` = 0") %>%
+  confint()
+
+glht(mod_3, "`(Intercept)` + `wealth55` + 60*`age` = 0") %>%
+  confint()
+```
+
+**Q: Use the `linearHypothesis()` function to test whether including the interaction term between female and wealth5 improves model fit significantly?**
+
+```{r}
+lincoms <- paste0("sexfemale:wealth5", 2:5, " = 0")
+linearHypothesis(mod_3, lincoms)
+```
+
+Results show that there is some statistical evidence (p=0.054) against the null hypothesis that all of the interaction coefficients are 0. So we may want to keep the interaction in the model.
+
+# 2. Linear regression with non-linear relationships
+
+## 2.1. Summary statistics
+
+We want to run a multiple regression with total cholesterol (`chol`) as the outcome, and age, female, and `bmi` as the predictor variables. First, we want to examine the summary statistics for `chol` and `bmi` these two new variables. (We checked the summary statistics for age and female in the last session.)
+
+```{r}
+elsa %>%
+  select(chol, bmi) %>%
+  descr()
+```
+
+**Q. Show the histogram and kernel density plot of the outcome variable (`chol`). Is `chol` normally distributed?
+
+We can plot the histogram and kernel density simultaneously thanks to ggplot's *layered* approach to plot construction. 
+
+```{r}
+ggplot(elsa) +
+  aes(x = chol) +
+  geom_histogram(aes(y = ..density..)) +
+  geom_density(color = "red") +
+  stat_function(fun = dnorm, args = list(mean = mean(elsa$chol, na.rm = TRUE),
+                                         sd = sd(elsa$chol, na.rm = TRUE)))
+```
+
+`chol` is almost normally distributed.
+
+Next, we will be will create scatter plots to check the linearity assumption between `chol` and `age` and between `chol` and `bmi`.
+
+```{r}
+ggplot(elsa) +
+  aes(x = age, y = chol) +
+  geom_jitter(alpha = 0.2)
+```
+
+**Q: Is there evidence of a linear relationship between chol and age?**
+
+From the scatter plot, higher values of age in general correspond with slightly higher values of total cholesterol, so there is a positive linear relationship suggested, although this is quite weak.
+
+```{r}
+ggplot(elsa) +
+  aes(x = bmi, y = chol) +
+  geom_jitter(alpha = 0.2)
+```
+
+**Q: What can you tell from the sctter plot? Is there evidence of a non-linear relationship between `chol` and `bmi`?**
+
+There is some evidence of a non-linear relationship between `chol` and `bmi.` As BMI increases, total cholesterol at first increases; then as BMI continues to increase, total cholesterol decreases.
+
+## 2.2. Specifying non-linear relationships
+
+It is often found that the relationship between the outcome variable and an independent variable is non-linear. We will try two possible ways of incorporating such an independent variable in the multiple regression.
+
+First, let us run a multiple regression with `chol` as the outcome, and age, female, and bmi as the predictor variables. This is will be the basic model to be compared with.
+
+```{r}
+mod_4 <- lm(chol ~ age + sex + bmi, elsa)
+summary(mod_4)
+```
+
+One possibility of handling non-linear relationship is to find an algebraic description of the relationship. For example, it may be quadratic, in which case both the variable (`bmi`) and its square would be included in the model. 
+
+We could do this by creating a new variable `bmi_sq` equal to `bmi^2` and adding this in the `lm()` functional call. An issue with this is that R won't know that `bmi_sq` is a function of `bmi`. Instead we can use the `I()` syntax to make this explicit. The advantage of this is that some postestimation commands will know `bmi` and `I(bmi^2)` are related. We can put an number of functions in `I()` includes functions of two or more variables.
+
+```{r}
+mod_5 <- lm(chol ~ age + sex + bmi + I(bmi^2), elsa)
+summary(mod_5)
+```
+
+**Q: Can you interpret the results of `bmi` and `I(bmi^2)`?**
+
+The p-values of `bmi` and `I(bmi^2)` are very small (p<0.001) and suggests low compatibility with the null hypothesis that the coefficients are zero. The coefficient on `bmi` is greater than zero > 0. The coefficient on I(bmi^2) is less than zero. This means that total cholesterol is increasing at first, but will eventually turn around and be decreasing (an inverted-U). 
+
+**Q: By comparing the models with and without squared BMI, what do their R-squared and Root MSE tell us?**
+
+$R^2$ in the current model is higher than the model without BMI squared. However, we need caution in interpreting R2 to justify the utility of a variable added into the model, as R2 increases even when the new variables have no real predictive capability. So we need to look at the values of Root MSE.
+
+```{r}
+sqrt(mean(mod_4$residuals^2))
+sqrt(mean(mod_5$residuals^2))
+```
+
+Lower values of Root MSE indicate better fit. Root MSE is also lower than before. So we can conclude that the model with BMI squared is a better fitting model.
+
+The second possibility is to transform BMI into a categorical variable. For most purposes, a subdivision into 3–5 groups - depending on the sample size - is adequate to investigate non-linearity of the relationship. There is a categorical BMI variable already available in your data (`bmi4`). 
+
+```{r}
+freq(elsa$bmi4)
+```
+
+The 'under 20' category is very small. In this is practical, we will combine the 'under 20' and the 'over 20-25' categories. (There are pros and cons to doing this and it is important to think about what this might mean for your research.) 
+
+```{r}
+elsa <- elsa %>%
+  mutate(bmi3 = fct_recode(bmi4, "Under 25" = "Under 20",
+                           "Under 25" = "Over 20-25"))
+table(elsa$bmi3, elsa$bmi4, useNA = "ifany")
+```
+
+Let's run the model using `bmi3`.
+
+```{r}
+mod_6 <- lm(chol ~ age + sex + bmi3, elsa)
+summary(mod_6)
+```
+
+**Q: Can you interpret the results of `bmi3`?**
+
+The coefficient for 25-30 BMI group is 0.18 meaning that people in the 25-30 BMI group have 0.18 mmol/l higher total cholesterol than people in the <25 BMI group. The test statistic for this coefficient is t = 3.41 and the p value = 0.001, so we are more confident that we should reject the null hypothesis that there is no difference between the 25-30 BMI group and the <25 BMI group. People with a BMI between 25 and 30 have 0.28 mmol/l higher total cholesterol than people in the <25 BMI group. Its p value is very low (<0.001) so there is enough statistical evidence to reject the null hypothesis that there is no difference between the 30+ BMI group and the <25 BMI group.
+
+Notice how this model caputres the non-linear relationship: the move from BMI < 25 to 25-30 is association with 0.18 higher SBP, while the move from 25-30 to 30+ is associated with 0.10 higher SBP (0.28 - 0.18). We can use `glht()` to see if the difference is statistically significant.
+
+```{r}
+glht(mod_6, "`bmi3Over 30` - `bmi3Over 25-30` = 0") %>%
+  summary()
+```
+
+The p-value is low (0.0695) so there is some evidence of a difference between the two highest BMI groups on SBP levels (after adjusting for ager and sex).
+
+**Q: By comparing this `bmi3` model with the BMI-squared mode and the basic model (bmi), what do their R-squared and Root MSE tell us?**
+
+```{r}
+sqrt(mean(mod_4$residuals^2))
+sqrt(mean(mod_5$residuals^2))
+sqrt(mean(mod_6$residuals^2))
+```
+
+$R^2$ in the bmi3 model is lower (0.0714) than that in the bmisq model (0.0774), and Root MSE in the `bmi3` model is slightly higher (1.066) than that in the BMI-squared model (1.064). These suggest that the BMI-squared is a slightly better model than the `bmi3` model. But the `bmi3` model is still better than the basic model, as its Root MSE (1.066) is lower than the basic model (1.067).
+
+# 3.	Data transformation
+
+The assumption of normality will not always be satisfied by a particular set of data. Next, we see how such problems can often be overcome by transforming the data to a different scale of measurement. It is recommended to transform the dependent variable first and then if necessary you can transform the independent variables.
+
+**Q: Check the histogram and kernel density of BMI**
+
+```{r}
+ggplot(elsa) +
+  aes(x = bmi) +
+  geom_histogram(aes(y = ..density..)) +
+  geom_density(color = "red") +
+  stat_function(fun = dnorm, 
+  args = list(mean = mean(elsa$bmi, na.rm = TRUE),
+  sd = sd(elsa$bmi, na.rm = TRUE)))
+```
+
+BMI is slightly positively skewed, but not so much.
+
+We can use the `gladder()` function from `describedata` to explore possible transformations.
+
+```{r}
+gladder(elsa$bmi)
+```
+
+To look at test statistics for which transformation is best, use `ladder()` from `describedata`.
+
+```{r}
+ladder(elsa$bmi)
+```
+
+Smaller (chi-2) statistics indicates better transformation (alternatively, higher p-values). So it suggests that 1/sqrt is a better transformation.
